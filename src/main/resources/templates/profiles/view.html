@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      layout:decorate="~{layouts/base}"
+      th:with="title='View Profile'">
+<head>
+    <title>View Profile</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <style>
+        /* Base styles */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-size: 0.9375rem;
+            line-height: 1.5;
+            color: #212529;
+            background-color: #f8f9fa;
+        }
+        
+        .card {
+            margin-bottom: 1.5rem;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+        
+        .card-header {
+            background-color: #f8f9fa;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            padding: 1rem 1.25rem;
+        }
+        
+        .card-body {
+            padding: 1.25rem;
+        }
+        
+        .table {
+            width: 100%;
+            margin-bottom: 1rem;
+            color: #212529;
+            border-collapse: collapse;
+        }
+        
+        .table th,
+        .table td {
+            padding: 0.75rem;
+            vertical-align: top;
+            border-top: 1px solid #dee2e6;
+        }
+        
+        .table thead th {
+            vertical-align: bottom;
+            border-bottom: 2px solid #dee2e6;
+            background-color: #f8f9fa;
+        }
+        
+        .table-bordered {
+            border: 1px solid #dee2e6;
+        }
+        
+        .table-bordered th,
+        .table-bordered td {
+            border: 1px solid #dee2e6;
+        }
+        
+        .table-hover tbody tr:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+        
+        .table-sm th,
+        .table-sm td {
+            padding: 0.3rem;
+        }
+        
+        .table-responsive {
+            display: block;
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .method-container {
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        .method-list {
+            margin-bottom: 10px;
+        }
+        .method-item {
+            padding: 5px 10px;
+            margin: 2px 0;
+            background-color: white;
+            border-left: 4px solid #6c757d;
+            border-radius: 2px;
+        }
+        
+        /* Style for the select options */
+        .form-select option {
+            padding: 8px 12px !important;
+            margin: 2px 0;
+        }
+        
+        /* Coverage level styles */
+        .coverage-LOW {
+            background-color: #fff3cd80;
+            border-left: 3px solid #ffc107;
+        }
+        
+        .coverage-MEDIUM {
+            background-color: #cce5ff80;
+            border-left: 3px solid #0d6efd;
+        }
+        
+        .coverage-HIGH {
+            background-color: #d4edda80;
+            border-left: 3px solid #198754;
+        }
+        
+        /* Safety table styles */
+        .safety-table tbody tr.table-primary td {
+            background-color: #cfe2ff;
+            font-weight: 600;
+        }
+        
+        /* Method item styles */
+        .method-item {
+            display: flex;
+            align-items: center;
+            padding: 0.375rem 0.75rem;
+            margin: 0.125rem 0;
+            border-radius: 0.25rem;
+            transition: background-color 0.15s ease-in-out;
+        }
+        
+        .method-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .method-checkbox {
+            margin-right: 0.5rem;
+        }
+        
+        .method-label {
+            margin-bottom: 0;
+            font-weight: 400;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="bi bi-person-lines-fill me-2"></i>Profile Details</h1>
+            <div>
+                <a th:href="@{/profiles}" class="btn btn-outline-secondary me-2">
+                    <i class="bi bi-arrow-left me-1"></i> Back to List
+                </a>
+                <a th:href="@{/profiles/{id}/edit(id=${profile.id})}" class="btn btn-primary">
+                    <i class="bi bi-pencil-square me-1"></i> Edit Profile
+                </a>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0" th:text="${profile.name}">Profile Name</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <h6>Description</h6>
+                        <p class="text-muted" th:if="${profile.description == null || profile.description.isEmpty()}">
+                            No description provided
+                        </p>
+                        <p th:if="${profile.description != null && !profile.description.isEmpty()}" 
+                           th:text="${profile.description}"></p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Architecture Type</h6>
+                        <select class="form-select" id="architectureType">
+                            <option value="">Select Architecture Type</option>
+                            <option th:each="type : ${T(com.intervale.diagnostictool.model.Device.ArchitectureType).values()}"
+                                    th:value="${type}"
+                                    th:text="${@architectureTypeFormatter.format(type)}"
+                                    th:selected="${profile.architectureType == type}">
+                            </option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <h6>Devices and Diagnostic Methods</h6>
+                    <div th:if="${profile.devices.isEmpty()}" class="alert alert-info">
+                        No devices added to this profile.
+                    </div>
+                    <div th:if="!${profile.devices.isEmpty()}" class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Device</th>
+<!--                                    <th>Category</th>-->
+                                    <th>Available Diagnostic Methods</th>
+                                    <th>Type Faults</th>
+                                    <th>Results</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="device : ${profile.devices}">
+                                    <td th:text="${device.name}">Device Name</td>
+<!--                                    <td th:text="${device.category?.name ?: 'N/A'}">Category</td>-->
+                                    <td>
+                                        <div class="methods-container">
+                                            <th:block th:each="deviceWithFaults : ${devicesWithFaults}" th:if="${deviceWithFaults.device.id == device.id}">
+                                                <div th:each="method : ${deviceWithFaults.diagnosticMethods}"
+                                                     th:class="'method-item coverage-' + ${method.coverageLevel}"
+                                                     th:data-coverage-level="${method.coverageLevel}"
+                                                     th:data-coverage-percent="${method.coveragePercent}">
+                                                    <input type="checkbox"
+                                                           th:id="'method-' + ${device.id} + '-' + ${method.id}"
+                                                           th:name="selectedMethods"
+                                                           th:value="${method.id}"
+                                                           class="method-checkbox form-check-input">
+                                                    <label th:for="'method-' + ${device.id} + '-' + ${method.id}"
+                                                           class="method-label">
+                                                        <span th:text="${method.name + ' (' + method.coverageLevel + ', ' + method.coveragePercent + '%)'}"></span>
+                                                    </label>
+                                                </div>
+                                            </th:block>
+                                        </div>
+                                    </td>
+                                    <td style="min-width: 250px;">
+                                        <div class="methods-container">
+                                            <th:block th:each="deviceWithFaults : ${devicesWithFaults}" th:if="${deviceWithFaults.device.id == device.id}">
+                                                <div th:each="fault : ${deviceWithFaults.faults}"
+                                                     th:class="'method-item coverage-' + ${fault.faultType.coverageRequirement}"
+                                                     th:data-coverage-level="${fault.faultType.coverageRequirement}"
+                                                     th:data-coverage-percent="0">  <!-- Default value since faults might not have a percentage -->
+                                                    <input type="checkbox"
+                                                           th:checked="${fault.covered}"
+                                                           th:data-profile-id="${profile.id}"
+                                                           th:data-device-id="${device.id}"
+                                                           th:data-fault-id="${fault.faultType.id}"
+                                                           class="fault-checkbox form-check-input">
+                                                    <label class="method-label">
+                                                        <span th:text="${fault.faultType.name + ' (' + fault.faultType.coverageRequirement + ')'}"></span>
+                                                    </label>
+                                                </div>
+                                                <div th:if="${deviceWithFaults.faults == null || deviceWithFaults.faults.isEmpty()}" 
+                                                     class="text-muted">
+                                                    Нет неисправностей
+                                                </div>
+                                            </th:block>
+                                        </div>
+                                    </td>
+                                    <td style="min-width: 300px;">
+                                        <div class="results-container">
+                                            <div class="table-responsive">
+                                                <table class="table table-bordered table-sm">
+                                                    <thead class="table-light">
+                                                        <tr>
+                                                            <th rowspan="2" class="align-middle">Доля безопасных отказов элемента</th>
+                                                            <th colspan="3" class="text-center">Отказоустойчивость аппаратных средств</th>
+                                                        </tr>
+                                                        <tr>
+                                                            <th>N = 0</th>
+                                                            <th>N = 1</th>
+                                                            <th>N = 2</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <tr>
+                                                            <td>менее 60%</td>
+                                                            <td> - </td>
+                                                            <td>УПБ 1</td>
+                                                            <td>УПБ 2</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>от 60% до менее 90%</td>
+                                                            <td>УПБ 1</td>
+                                                            <td>УПБ 2</td>
+                                                            <td>УПБ 3</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>от 90% до менее 99%</td>
+                                                            <td>УПБ 2</td>
+                                                            <td>УПБ 3</td>
+                                                            <td>УПБ 4</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>более и равно 99%</td>
+                                                            <td>УПБ 2</td>
+                                                            <td>УПБ 4</td>
+                                                            <td>УПБ 4</td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <!-- CSRF Token - Using th:if to handle cases where CSRF might be disabled -->
+                                <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" id="csrfToken" />
+                                <input type="hidden" th:unless="${_csrf != null}" name="_csrf" value="" id="csrfToken" />
+                                <h5 class="card-title">Profile Information</h5>
+                                <dl class="row">
+                                    <dt class="col-sm-3">ID</dt>
+                                    <dd class="col-sm-9" th:text="${profile.id}">-</dd>
+
+                                    <th:block th:if="${profile.createdAt != null}">
+                                        <dt class="col-sm-3">Created</dt>
+                                        <dd class="col-sm-9" th:text="${#temporals.format(profile.createdAt, 'dd.MM.yyyy HH:mm')}">-</dd>
+                                    </th:block>
+
+                                    <th:block th:if="${profile.updatedAt != null}">
+                                        <dt class="col-sm-3">Last Updated</dt>
+                                        <dd class="col-sm-9" th:text="${#temporals.format(profile.updatedAt, 'dd.MM.yyyy HH:mm')}">-</dd>
+                                    </th:block>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            <div class="card-footer text-end">
+                <a th:href="@{/profiles}" class="btn btn-outline-secondary me-2">
+                    <i class="bi bi-arrow-left me-1"></i> Back to List
+                </a>
+                <a th:href="@{/profiles/{id}/edit(id=${profile.id})}" class="btn btn-primary">
+                    <i class="bi bi-pencil-square me-1"></i> Edit Profile
+                </a>
+            </div>
+            </div>
+
+    <style>
+        /* Style for the methods container */
+        .methods-container {
+            min-width: 300px;
+            max-height: 290px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+            padding: 0.5rem;
+        }
+        
+        .method-item {
+            display: flex;
+            align-items: center;
+            padding: 0.25rem 0.5rem;
+            margin: 0.125rem 0;
+            border-radius: 0.25rem;
+        }
+        
+        .method-checkbox {
+            margin-right: 0.5rem;
+        }
+        
+        .method-label {
+            flex-grow: 1;
+        }
+        
+        .coverage-LOW {
+            background-color: #ffc10740; /* Yellow with opacity */
+            border-left: 3px solid #ffc107;
+        }
+        
+        .coverage-MEDIUM {
+            background-color: #0dcaf040; /* Blue with opacity */
+            border-left: 3px solid #0dcaf0;
+        }
+        
+        .coverage-HIGH {
+            background-color: #19875440; /* Green with opacity */
+            border-left: 3px solid #198754;
+        }
+        
+        /* Safety table styles */
+        .safety-table tbody tr.table-primary td {
+            background-color: #cfe2ff;
+            font-weight: bold;
+        }
+    </style>
+    
+    <!-- Подключаем необходимые скрипты -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Function to update fault status via AJAX
+        function updateFaultStatus(checkbox) {
+            const profileId = checkbox.dataset.profileId;
+            const deviceId = checkbox.dataset.deviceId;
+            const faultId = checkbox.dataset.faultId;
+            const isChecked = checkbox.checked;
+            
+            // Store the current state in case we need to revert
+            const originalState = !isChecked;
+            
+            // Disable checkbox during request
+            checkbox.disabled = true;
+            
+            // Create URL with parameters
+            const url = new URL(`/profiles/${profileId}/update-fault-status`, window.location.origin);
+            
+            // Create form data
+            const formData = new FormData();
+            formData.append('deviceId', deviceId);
+            formData.append('faultId', faultId);
+            formData.append('covered', isChecked);
+            
+            // Make the request
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: new URLSearchParams({
+                    deviceId: deviceId,
+                    faultId: faultId,
+                    covered: isChecked
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Re-enable the checkbox
+                checkbox.disabled = false;
+                
+                if (data.success) {
+                    // Update UI to reflect the change
+                    const label = checkbox.nextElementSibling;
+                    if (isChecked) {
+                        label.classList.add('text-success', 'fw-bold');
+                    } else {
+                        label.classList.remove('text-success', 'fw-bold');
+                    }
+                    // Recalculate safety integrity after updating fault status
+                    if (typeof calculateSafetyIntegrity === 'function') {
+                        calculateSafetyIntegrity();
+                    }
+                } else {
+                    // Revert checkbox state if update failed
+                    checkbox.checked = originalState;
+                    alert('Ошибка при обновлении статуса неисправности: ' + (data.message || 'Неизвестная ошибка'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                // Revert checkbox state on error and re-enable it
+                checkbox.checked = originalState;
+                checkbox.disabled = false;
+                alert('Произошла ошибка при обновлении статуса неисправности');
+            });
+        }
+    </script>
+    <script>
+        // Function to set colors for coverage indicators
+        function setCoverageColors() {
+            document.querySelectorAll('[data-coverage-level]').forEach(option => {
+                const level = option.getAttribute('data-coverage-level');
+                
+                // Set background color based on coverage level
+                const indicator = option.querySelector('.coverage-indicator') || option;
+                if (indicator) {
+                    switch(level) {
+                        case 'LOW':
+                            indicator.style.backgroundColor = '#ffcccc';
+                            break;
+                        case 'MEDIUM':
+                            indicator.style.backgroundColor = '#fff3cd';
+                            break;
+                        case 'HIGH':
+                            indicator.style.backgroundColor = '#d4edda';
+                            break;
+                        default:
+                            indicator.style.backgroundColor = '#f8f9fa';
+                    }
+                }
+            });
+        }
+        
+        // Set colors for coverage indicators on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            setCoverageColors();
+        });
+
+        // Function to calculate safety integrity level (SIL)
+        function calculateSafetyIntegrity() {
+            const selectedArchitecture = $('#architectureType').val();
+            if (!selectedArchitecture) return null;
+            
+            // Get all selected methods and their coverage
+            const selectedMethods = [];
+            $('.method-checkbox:checked').each(function() {
+                const $item = $(this).closest('.method-item');
+                selectedMethods.push({
+                    coverageLevel: $item.data('coverage-level'),
+                    coveragePercent: parseFloat($item.data('coverage-percent') || '0')
+                });
+            });
+            
+            // Get all selected faults and their coverage
+            const selectedFaults = [];
+            $('.fault-checkbox:checked').each(function() {
+                const $item = $(this).closest('.method-item');
+                selectedFaults.push({
+                    coverageLevel: $item.data('coverage-level') || 'LOW',
+                    coveragePercent: parseFloat($item.data('coverage-percent') || '0')
+                });
+            });
+            
+            // Calculate minimum coverage percentage
+            let minCoveragePercent = 100;
+            [...selectedMethods, ...selectedFaults].forEach(item => {
+                if (item.coveragePercent > 0 && item.coveragePercent < minCoveragePercent) {
+                    minCoveragePercent = item.coveragePercent;
+                }
+            });
+            
+            // If no items selected, use 0% coverage
+            if (minCoveragePercent === 100 && (selectedMethods.length > 0 || selectedFaults.length > 0)) {
+                minCoveragePercent = 0;
+            }
+            
+            // Determine SIL based on architecture and coverage
+            let sil = 'Н/Д';
+            const n = selectedArchitecture === 'ONE_OUT_OF_ONE' ? 0 : 
+                      selectedArchitecture === 'ONE_OUT_OF_TWO' ? 1 : 2;
+            
+            if (minCoveragePercent < 60) {
+                sil = n >= 1 ? 'УПБ 1' : '-';
+                if (n >= 2) sil = 'УПБ 2';
+            } else if (minCoveragePercent < 90) {
+                sil = n === 0 ? 'УПБ 1' : n === 1 ? 'УПБ 2' : 'УПБ 3';
+            } else if (minCoveragePercent < 99) {
+                sil = n === 0 ? 'УПБ 2' : n === 1 ? 'УПБ 3' : 'УПБ 4';
+            } else {
+                sil = n === 0 ? 'УПБ 2' : 'УПБ 4';
+            }
+            
+            // Update the table
+            updateSafetyTable(selectedArchitecture, minCoveragePercent);
+            
+            return {
+                coveragePercent: minCoveragePercent,
+                sil: sil
+            };
+        }
+
+        // Function to update the safety table
+        function updateSafetyTable(architecture, coveragePercent) {
+            const n = architecture === 'ONE_OUT_OF_ONE' ? 0 : 
+                      architecture === 'ONE_OUT_OF_TWO' ? 1 : 2;
+            
+            // Clear all previous highlights and reset SIL values
+            $('.safety-table td').removeClass('table-primary fw-bold');
+            
+            // Clear all SIL values in the table
+            $('.safety-table tbody tr').each(function() {
+                const $row = $(this);
+                $row.find('td:not(:first-child)').text('-');
+            });
+            
+            // Find the row that matches the current coverage range
+            let targetRow = null;
+            $('.safety-table tbody tr').each(function() {
+                const $row = $(this);
+                const rangeText = $row.find('td:first').text().trim();
+                
+                if ((rangeText.includes('менее 60%') && coveragePercent < 60) ||
+                    (rangeText.includes('от 60% до менее 90%') && coveragePercent >= 60 && coveragePercent < 90) ||
+                    (rangeText.includes('от 90% до менее 99%') && coveragePercent >= 90 && coveragePercent < 99) ||
+                    (rangeText.includes('более и равно 99%') && coveragePercent >= 99)) {
+                    targetRow = $row;
+                    return false; // Exit the loop once we find the matching row
+                }
+            });
+            
+            if (!targetRow) return; // No matching row found
+            
+            // Calculate the SIL for the current architecture and coverage
+            let sil = '-';
+            if (coveragePercent < 60) {
+                sil = n >= 1 ? 'УПБ 1' : '-';
+                if (n >= 2) sil = 'УПБ 2';
+            } else if (coveragePercent < 90) {
+                sil = n === 0 ? 'УПБ 1' : n === 1 ? 'УПБ 2' : 'УПБ 3';
+            } else if (coveragePercent < 99) {
+                sil = n === 0 ? 'УПБ 2' : n === 1 ? 'УПБ 3' : 'УПБ 4';
+            } else {
+                sil = n === 0 ? 'УПБ 2' : 'УПБ 4';
+            }
+            
+            // Find and highlight the specific cell
+            const cellIndex = n + 1; // +1 because first column is the range
+            const $cell = targetRow.find(`td:eq(${cellIndex})`);
+            $cell.addClass('table-primary fw-bold').text(sil);
+        }
+        </script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap-select@1.14.0-beta2/dist/js/bootstrap-select.min.js"></script>
+
+        <th:block layout:fragment="scripts">
+            <script th:inline="javascript">
+    //<![CDATA[
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize tooltips
+        var initTooltips = function() {
+            $('[data-bs-toggle="tooltip"]').tooltip({
+                trigger: 'hover',
+                html: true
+            });
+        };
+        
+        // Update method visibility
+        var updateMethodVisibility = function() {
+            var selectedArch = $('#architectureType').val();
+            console.log('Updating visibility for architecture:', selectedArch);
+            
+            $('.method-item, .fault-item').each(function() {
+                var $item = $(this);
+                var level = ($item.data('coverage-level') || 'LOW').toUpperCase();
+                var showItem = false;
+                
+                console.log('Item level:', level, 'for element:', $item);
+                
+                if (selectedArch === 'ONE_OUT_OF_ONE') {
+                    showItem = (level === 'LOW');
+                } else if (selectedArch === 'ONE_OUT_OF_TWO') {
+                    showItem = (level === 'LOW' || level === 'MEDIUM' || level === 'MED' || level === 'MID');
+                } else if (selectedArch === 'TWO_OUT_OF_THREE') {
+                    showItem = true; // Show all methods for 2oo3
+                }
+                
+                console.log('Showing item:', showItem, 'for level:', level, 'in architecture:', selectedArch);
+                $item.toggle(showItem);
+            });
+            
+            if (typeof calculateSafetyIntegrity === 'function') {
+                calculateSafetyIntegrity();
+            }
+        };
+        
+        // Initialize the page
+        var initPage = function() {
+            initTooltips();
+            
+            // Set up event listeners
+            $(document).on('change', '.method-checkbox', function() {
+                if (typeof calculateSafetyIntegrity === 'function') {
+                    calculateSafetyIntegrity();
+                }
+            });
+
+            // Handle fault checkbox changes
+            $(document).on('change', '.fault-checkbox', function() {
+                updateFaultStatus(this);
+                if (typeof calculateSafetyIntegrity === 'function') {
+                    calculateSafetyIntegrity();
+                }
+            });
+            
+            $('#architectureType').on('change', updateMethodVisibility);
+            
+            // Initialize UI components
+            $('.table-bordered').addClass('safety-table');
+            
+            if ($.fn.selectpicker) {
+                $('.selectpicker').selectpicker();
+            }
+            
+            // Initial update
+            updateMethodVisibility();
+        };
+        
+        // Start initialization
+        initPage();
+    });
+    //]]>
+    </script>
+    </th:block>
+</body>
+</html>

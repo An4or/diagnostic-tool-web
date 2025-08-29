@@ -1,0 +1,173 @@
+package com.intervale.diagnostictool.model;
+
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
+import com.intervale.diagnostictool.model.Device.ArchitectureType;
+
+import java.math.BigDecimal;
+import java.util.HashSet;
+import java.util.Objects;
+import java.util.Set;
+
+/**
+ * Represents a diagnostic method that can be applied to devices.
+ * Each method has an effectiveness level (LOW, MEDIUM, HIGH) and a diagnostic coverage percentage.
+ */
+@Getter
+@Setter
+@ToString(exclude = "devices")
+@Entity
+@Table(name = "diagnostic_methods")
+public class DiagnosticMethod {
+    
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "device_category_id", nullable = false)
+    private DeviceCategory deviceCategory;
+
+    @Column(nullable = false)
+    private String name;
+
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "effectiveness", nullable = false)
+    private Effectiveness effectiveness = Effectiveness.MEDIUM;
+
+    @Column(name = "diagnostic_coverage", nullable = false, precision = 5, scale = 2)
+    private BigDecimal diagnosticCoverage = BigDecimal.ZERO;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "suitability", nullable = false)
+    private Suitability suitability = Suitability.MEDIUM;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "implementation_complexity", nullable = false)
+    private ImplementationComplexity implementationComplexity = ImplementationComplexity.MEDIUM;
+
+    @Column(name = "gost_reference")
+    private String gostReference;
+
+    @ManyToMany
+    @JoinTable(
+        name = "device_diagnostic_methods",
+        joinColumns = @JoinColumn(name = "diagnostic_method_id"),
+        inverseJoinColumns = @JoinColumn(name = "device_id")
+    )
+    private Set<Device> devices = new HashSet<>();
+    
+    @Column(name = "coverage_level")
+    @Enumerated(EnumType.STRING)
+    private CoverageLevel coverageLevel = CoverageLevel.MEDIUM;
+
+    @Column(name = "coverage_percent")
+    private BigDecimal coveragePercent = BigDecimal.ZERO;
+
+    public DiagnosticMethod() {}
+
+    public DiagnosticMethod(String name, String description, 
+                          CoverageLevel coverageLevel, BigDecimal coveragePercent,
+                          ImplementationComplexity implementationComplexity, String gostReference) {
+        this.name = name;
+        this.description = description;
+        this.coverageLevel = coverageLevel;
+        this.coveragePercent = coveragePercent;
+        this.implementationComplexity = implementationComplexity;
+        this.gostReference = gostReference;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        DiagnosticMethod that = (DiagnosticMethod) o;
+        return Objects.equals(id, that.id) &&
+               Objects.equals(name, that.name) &&
+               Objects.equals(description, that.description) &&
+               effectiveness == that.effectiveness &&
+               Objects.equals(diagnosticCoverage, that.diagnosticCoverage) &&
+               suitability == that.suitability &&
+               implementationComplexity == that.implementationComplexity &&
+               Objects.equals(gostReference, that.gostReference) &&
+               coverageLevel == that.coverageLevel &&
+               Objects.equals(coveragePercent, that.coveragePercent);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, name, description, effectiveness, diagnosticCoverage, 
+                          suitability, implementationComplexity, gostReference, 
+                          coverageLevel, coveragePercent);
+    }
+
+    /**
+     * Coverage level for diagnostic methods
+     */
+    public enum CoverageLevel {
+        LOW,
+        MEDIUM,
+        HIGH
+    }
+
+    /**
+     * Implementation complexity levels
+     */
+    public enum ImplementationComplexity {
+        LOW,
+        MEDIUM,
+        HIGH
+    }
+
+    /**
+     * Effectiveness levels for diagnostic methods
+     */
+    public enum Effectiveness {
+        LOW,
+        MEDIUM,
+        HIGH
+    }
+
+    /**
+     * Suitability levels for diagnostic methods
+     */
+    public enum Suitability {
+        LOW,
+        MEDIUM,
+        HIGH
+    }
+
+    /**
+     * Minimum required diagnostic coverage based on architecture
+     */
+    @Transient
+    public BigDecimal getRequiredCoverage() {
+        if (effectiveness == null) {
+            return BigDecimal.ZERO;
+        }
+        return switch (effectiveness) {
+            case HIGH -> new BigDecimal("99.0");
+            case MEDIUM -> new BigDecimal("90.0");
+            case LOW -> new BigDecimal("60.0");
+        };
+    }
+
+    /**
+     * Check if this method is suitable for the given architecture
+     */
+    public boolean isSuitableForArchitecture(ArchitectureType architecture) {
+        if (architecture == null || effectiveness == null) {
+            return false;
+        }
+        return switch (architecture) {
+            case ONE_OUT_OF_ONE -> effectiveness == Effectiveness.HIGH;
+            case ONE_OUT_OF_TWO -> effectiveness == Effectiveness.HIGH || effectiveness == Effectiveness.MEDIUM;
+            case TWO_OUT_OF_THREE -> true;
+        };
+    }
+}

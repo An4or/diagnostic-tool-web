@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" 
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/main}">
+<head>
+    <title>Fault Management</title>
+    <link rel="stylesheet" th:href="@{/css/faults.css}">
+</head>
+<body>
+<div layout:fragment="content">
+    <div class="container-fluid">
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="h3 mb-0 text-gray-800">Fault Management</h1>
+            <button class="btn btn-primary" data-toggle="modal" data-target="#addFaultTypeModal">
+                <i class="fas fa-plus"></i> Add Fault Type
+            </button>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="row mb-4">
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-primary shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                    Total Fault Types</div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800" id="totalFaults">0</div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-bug fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-success shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                    Coverage</div>
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col-auto">
+                                        <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800">
+                                            <span id="coveragePercentage">0</span>%
+                                        </div>
+                                    </div>
+                                    <div class="col">
+                                        <div class="progress progress-sm mr-2">
+                                            <div id="coverageProgress" class="progress-bar bg-success" 
+                                                 role="progressbar" style="width: 0%" 
+                                                 aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-clipboard-check fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <ul class="nav nav-tabs" id="faultTabs" role="tablist">
+            <li class="nav-item">
+                <a class="nav-link active" id="fault-types-tab" data-toggle="tab" href="#fault-types" role="tab">
+                    Fault Types
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="profile-faults-tab" data-toggle="tab" href="#profile-faults" role="tab">
+                    Profile Faults
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="coverage-tab" data-toggle="tab" href="#coverage" role="tab">
+                    Coverage Analysis
+                </a>
+            </li>
+        </ul>
+
+        <!-- Tab Content -->
+        <div class="tab-content p-3 border border-top-0 rounded-bottom" id="faultTabsContent">
+            <!-- Fault Types Tab -->
+            <div class="tab-pane fade show active" id="fault-types" role="tabpanel">
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                        <h6 class="m-0 font-weight-bold text-primary">Fault Types</h6>
+                        <div class="input-group" style="width: 300px;">
+                            <input type="text" class="form-control" id="faultSearch" placeholder="Search fault types...">
+                            <div class="input-group-append">
+                                <button class="btn btn-outline-secondary" type="button" id="searchFaultBtn">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-bordered" id="faultTypesTable" width="100%" cellspacing="0">
+                                <thead>
+                                    <tr>
+                                        <th>Code</th>
+                                        <th>Name</th>
+                                        <th>Description</th>
+                                        <th>Category</th>
+                                        <th>Coverage Req.</th>
+                                        <th>GOST Reference</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="faultTypesTableBody">
+                                    <!-- Filled by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile Faults Tab -->
+            <div class="tab-pane fade" id="profile-faults" role="tabpanel">
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <label for="profileSelect">Select Profile</label>
+                        <select class="form-control" id="profileSelect">
+                            <option value="">-- Select Profile --</option>
+                            <!-- Filled by JavaScript -->
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="deviceCategorySelect">Filter by Device Category</label>
+                        <select class="form-control" id="deviceCategorySelect">
+                            <option value="">All Categories</option>
+                            <!-- Filled by JavaScript -->
+                        </select>
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button class="btn btn-primary" id="updateCoverageBtn">Update Coverage</button>
+                    </div>
+                </div>
+
+                <div class="card shadow mb-4">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-bordered" id="profileFaultsTable" width="100%" cellspacing="0">
+                                <thead>
+                                    <tr>
+                                        <th>Fault Code</th>
+                                        <th>Fault Name</th>
+                                        <th>Category</th>
+                                        <th>Coverage</th>
+                                        <th>Covered By</th>
+                                        <th>Notes</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="profileFaultsTableBody">
+                                    <!-- Filled by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Coverage Analysis Tab -->
+            <div class="tab-pane fade" id="coverage" role="tabpanel">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card shadow mb-4">
+                            <div class="card-header py-3">
+                                <h6 class="m-0 font-weight-bold text-primary">Coverage by Category</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-pie pt-4">
+                                    <canvas id="coveragePieChart"></canvas>
+                                </div>
+                                <div class="mt-4 text-center small">
+                                    <span class="mr-2">
+                                        <i class="fas fa-circle text-success"></i> Covered
+                                    </span>
+                                    <span class="mr-2">
+                                        <i class="fas fa-circle text-danger"></i> Not Covered
+                                    </span>
+                                    <span>
+                                        <i class="fas fa-circle text-secondary"></i> N/A
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card shadow mb-4">
+                            <div class="card-header py-3">
+                                <h6 class="m-0 font-weight-bold text-primary">Coverage Statistics</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-bordered" id="coverageStatsTable" width="100%" cellspacing="0">
+                                        <thead>
+                                            <tr>
+                                                <th>Category</th>
+                                                <th>Covered</th>
+                                                <th>Total</th>
+                                                <th>Coverage %</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="coverageStatsTableBody">
+                                            <!-- Filled by JavaScript -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Fault Type Modal -->
+    <div class="modal fade" id="faultTypeModal" tabindex="-1" role="dialog" aria-labelledby="faultTypeModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="faultTypeModalLabel">Add New Fault Type</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <form id="faultTypeForm">
+                    <div class="modal-body">
+                        <input type="hidden" id="faultTypeId">
+                        <div class="form-group">
+                            <label for="faultCode">Code</label>
+                            <input type="text" class="form-control" id="faultCode" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="faultName">Name</label>
+                            <input type="text" class="form-control" id="faultName" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="faultDescription">Description</label>
+                            <textarea class="form-control" id="faultDescription" rows="3"></textarea>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label for="deviceCategory">Device Category</label>
+                                <select class="form-control" id="deviceCategory" required>
+                                    <option value="">-- Select Category --</option>
+                                    <!-- Filled by JavaScript -->
+                                </select>
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label for="coverageRequirement">Coverage Requirement</label>
+                                <select class="form-control" id="coverageRequirement" required>
+                                    <option value="LOW">Low</option>
+                                    <option value="MEDIUM">Medium</option>
+                                    <option value="HIGH">High</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="gostReference">GOST Reference</label>
+                            <input type="text" class="form-control" id="gostReference">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Profile Fault Modal -->
+    <div class="modal fade" id="editProfileFaultModal" tabindex="-1" role="dialog" aria-labelledby="editProfileFaultModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editProfileFaultModalLabel">Edit Fault Coverage</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <form id="profileFaultForm">
+                    <input type="hidden" id="profileFaultId">
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label>Fault</label>
+                            <p class="form-control-static" id="faultTypeInfo"></p>
+                        </div>
+                        <div class="form-group">
+                            <label>Coverage Requirement</label>
+                            <p class="form-control-static" id="coverageRequirementInfo"></p>
+                        </div>
+                        <div class="form-group">
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input" id="isCovered">
+                                <label class="custom-control-label" for="isCovered">Mark as Covered</label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="coveredMethods">Covered By Methods</label>
+                            <select multiple class="form-control" id="coveredMethods" style="height: 150px;">
+                                <!-- Filled by JavaScript -->
+                            </select>
+                            <small class="form-text text-muted">Hold Ctrl/Cmd to select multiple methods</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="faultNotes">Notes</label>
+                            <textarea class="form-control" id="faultNotes" rows="3"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Include Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- Custom scripts for this page -->
+<script th:src="@{/js/faults.js}"></script>
+
+</body>
+</html>

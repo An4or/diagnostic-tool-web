@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      layout:decorate="~{layouts/base}"
+      th:with="title=${category.id == null ? 'Add Category' : 'Edit Category'}">
+<head>
+    <title th:text="${category.id == null ? 'Add Category' : 'Edit Category'} + ' - Diagnostic Tool'">Category Form</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>
+                <i class="bi" th:classappend="${category.id == null} ? 'bi-plus-circle' : 'bi-tag'" class="me-2"></i>
+                <span th:text="${category.id == null} ? 'Add New Category' : 'Edit Category'"></span>
+            </h1>
+            <a th:href="@{/device-categories}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i> Back to List
+            </a>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <form th:action="${category.id == null} ? @{/device-categories} : @{/device-categories/__${category.id}__}" 
+                      th:object="${category}" 
+                      method="post"
+                      class="needs-validation" 
+                      novalidate>
+                    
+                    <!-- CSRF Token -->
+                    <input type="hidden" th:if="${_csrf}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                    
+                    <!-- Method Spoofing for PUT -->
+                    <input type="hidden" name="_method" th:if="${category.id != null}" value="put" />
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="name" class="form-label">Category Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="name" th:field="*{name}" required />
+                            <div class="invalid-feedback">Please provide a category name.</div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea class="form-control" id="description" th:field="*{description}" rows="3"></textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a th:href="@{/device-categories}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-lg me-1"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save me-1"></i> 
+                            <span th:text="${category.id == null} ? 'Create Category' : 'Update Category'"></span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <th:block layout:fragment="scripts">
+        <script th:inline="javascript">
+            // Enable form validation
+            (function() {
+                'use strict';
+                
+                // Fetch all the forms we want to apply custom Bootstrap validation styles to
+                var forms = document.querySelectorAll('.needs-validation');
+                
+                // Loop over them and prevent submission
+                Array.prototype.slice.call(forms).forEach(function(form) {
+                    form.addEventListener('submit', function(event) {
+                        if (!form.checkValidity()) {
+                            event.preventDefault();
+                            event.stopPropagation();
+                        }
+                        
+                        form.classList.add('was-validated');
+                    }, false);
+                });
+            })();
+        </script>
+    </th:block>
+</body>
+</html>

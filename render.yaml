@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: diagnostic-tool-web
+    env: java
+    plan: free
+    buildCommand: mvn clean package
+    startCommand: java -jar target/*.jar
+    envVars:
+      - key: JAVA_OPTS
+        value: -Xmx256m

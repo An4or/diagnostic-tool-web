@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      layout:decorate="~{layouts/base}"
+      th:with="title='Profiles'">
+<head>
+    <title>Profiles - Diagnostic Tool</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="bi bi-person-lines-fill me-2"></i>Profiles</h1>
+            <a th:href="@{/profiles/create}" class="btn btn-primary">
+                <i class="bi bi-plus-lg me-1"></i> Add Profile
+            </a>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Name</th>
+                                <th>Description</th>
+                                <th>Devices</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:if="${#lists.isEmpty(profiles)}">
+                                <td colspan="5" class="text-center py-4 text-muted">
+                                    <i class="bi bi-inbox me-2"></i> No profiles found
+                                </td>
+                            </tr>
+                            <tr th:each="profile : ${profiles}" th:unless="${#lists.isEmpty(profiles)}">
+                                <td>
+                                    <a th:href="@{/profiles/{id}(id=${profile.id})}" class="text-decoration-none">
+                                        <strong th:text="${profile.name}"></strong>
+                                    </a>
+                                </td>
+                                <td>
+                                    <span class="text-muted" th:if="${profile.description == null || profile.description.isEmpty()}">
+                                        No description
+                                    </span>
+                                    <span th:if="${profile.description != null && !profile.description.isEmpty()}" 
+                                          th:text="${#strings.abbreviate(profile.description, 50)}"></span>
+                                </td>
+                                <td>
+                                    <span th:if="${profile.devices.size() == 0}" class="badge bg-secondary">No devices</span>
+                                    <div th:if="${profile.devices.size() > 0}" class="d-flex flex-wrap gap-1">
+                                        <span th:each="device : ${profile.devices}" 
+                                              class="badge bg-primary me-1 mb-1"
+                                              th:title="${device.description}">
+                                            <i class="bi bi-hdd-rack me-1"></i>
+                                            <span th:text="${device.name}"></span>
+                                        </span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span th:if="${profile.createdAt != null}" 
+                                          th:text="${#temporals.format(profile.createdAt, 'dd.MM.yyyy HH:mm')}">
+                                    </span>
+                                    <span th:if="${profile.createdAt == null}" class="text-muted">N/A</span>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a th:href="@{/profiles/{id}/edit(id=${profile.id})}" 
+                                           class="btn btn-outline-primary"
+                                           title="Edit">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <button type="button" 
+                                                class="btn btn-outline-danger"
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#deleteModal"
+                                                th:data-bs-profile-id="${profile.id}"
+                                                th:data-bs-profile-name="${profile.name}"
+                                                title="Delete">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delete Confirmation Modal -->
+        <div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Confirm Deletion</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Are you sure you want to delete profile <strong id="profileName"></strong>?</p>
+                        <p class="text-danger">This action cannot be undone.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <form id="deleteForm" method="post" action="">
+                            <input type="hidden" name="_method" value="delete" />
+                            <button type="submit" class="btn btn-danger">Delete</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <th:block layout:fragment="scripts">
+        <script th:inline="javascript">
+            document.addEventListener('DOMContentLoaded', function() {
+                // Handle delete modal
+                const deleteModal = document.getElementById('deleteModal');
+                if (deleteModal) {
+                    deleteModal.addEventListener('show.bs.modal', function (event) {
+                        const button = event.relatedTarget;
+                        const profileId = button.getAttribute('data-bs-profile-id');
+                        const profileName = button.getAttribute('data-bs-profile-name');
+                        
+                        // Update modal content
+                        const profileNameElement = this.querySelector('#profileName');
+                        if (profileNameElement) {
+                            profileNameElement.textContent = profileName || 'этот профиль';
+                        }
+                        
+                        // Update delete form action
+                        const deleteForm = this.querySelector('#deleteForm');
+                        if (deleteForm) {
+                            // Use Thymeleaf's URL syntax for proper context path handling
+                            const baseUrl = /*[[@{/}]]*/ '';
+                            deleteForm.action = baseUrl + 'profiles/' + profileId;
+                            
+                            // Add CSRF token if needed
+                            const csrfToken = document.querySelector('meta[name="_csrf"]')?.content;
+                            if (csrfToken) {
+                                const csrfInput = document.createElement('input');
+                                csrfInput.type = 'hidden';
+                                csrfInput.name = '_csrf';
+                                csrfInput.value = csrfToken;
+                                // Remove any existing CSRF token to avoid duplicates
+                                const existingToken = deleteForm.querySelector('input[name="_csrf"]');
+                                if (existingToken) {
+                                    existingToken.remove();
+                                }
+                                deleteForm.appendChild(csrfInput);
+                            }
+                        }
+                    });
+                }
+            });
+        </script>
+    </th:block>
+</body>
+</html>

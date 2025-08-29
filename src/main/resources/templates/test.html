@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/base}">
+<head>
+    <title>Test Page</title>
+</head>
+<body>
+    <div layout:fragment="content" class="container mt-5">
+        <h1 class="mb-4">Test Page</h1>
+        
+        <!-- Test Bootstrap Styling -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Bootstrap Test</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-success">
+                    <i class="bi bi-check-circle-fill me-2"></i>
+                    This is a success alert with a Bootstrap icon
+                </div>
+                
+                <button class="btn btn-primary me-2">
+                    <i class="bi bi-check-lg me-1"></i> Primary Button
+                </button>
+                
+                <button class="btn btn-outline-secondary">
+                    <i class="bi bi-x-lg me-1"></i> Secondary Button
+                </button>
+                
+                <div class="mt-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="testCheck">
+                        <label class="form-check-label" for="testCheck">
+                            Test checkbox
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Test JavaScript -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">JavaScript Test</h5>
+            </div>
+            <div class="card-body">
+                <button id="testButton" class="btn btn-info text-white">
+                    <i class="bi bi-play-fill me-1"></i> Test JavaScript
+                </button>
+                <div id="testResult" class="mt-3"></div>
+            </div>
+        </div>
+    </div>
+
+    <th:block layout:fragment="scripts">
+        <script th:inline="javascript">
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM fully loaded');
+            
+            // Проверка загрузки jQuery и Bootstrap
+            console.log('jQuery version:', window.jQuery ? window.jQuery.fn.jquery : 'jQuery not loaded');
+            console.log('Bootstrap version:', window.bootstrap ? 'Loaded' : 'Not loaded');
+            
+            const testButton = document.getElementById('testButton');
+            const testResult = document.getElementById('testResult');
+            
+            if (testButton && testResult) {
+                console.log('Test button found');
+                
+                testButton.addEventListener('click', function() {
+                    console.log('Test button clicked');
+                    
+                    const result = `
+                        <div class="alert alert-success">
+                            <i class="bi bi-check-circle-fill me-2"></i>
+                            JavaScript работает корректно!<br>
+                            Время: ${new Date().toLocaleTimeString()}
+                        </div>
+                    `;
+                    
+                    testResult.innerHTML = result;
+                });
+            } else {
+                console.error('Test elements not found');
+            }
+            
+            // Проверка загрузки иконок
+            const iconTest = document.createElement('div');
+            iconTest.className = 'alert alert-info mt-3';
+            iconTest.innerHTML = `
+                <i class="bi bi-check-circle-fill me-2"></i>
+                Проверка иконок: 
+                <i class="bi bi-heart-fill text-danger"></i>
+                <i class="bi bi-star-fill text-warning"></i>
+                <i class="bi bi-gear-fill text-primary"></i>
+            `;
+            document.body.appendChild(iconTest);
+        });
+    </script>
+</th:block>
+</body>
+</html>

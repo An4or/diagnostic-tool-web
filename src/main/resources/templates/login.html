@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/base}">
+<head>
+    <title>Welcome - Diagnostic Tool</title>
+</head>
+<body>
+    <div layout:fragment="content" class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8 text-center">
+                <div class="card shadow">
+                    <div class="card-body p-5">
+                        <h1 class="display-4 mb-4">Welcome to Diagnostic Tool</h1>
+                        <p class="lead mb-4">This is a diagnostic tool for system monitoring and analysis.</p>
+                        
+                        <div class="row mt-5">
+                            <div class="col-md-6 mb-4">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <i class="bi bi-people display-4 text-primary mb-3"></i>
+                                        <h3>Profiles</h3>
+                                        <p>View and manage system profiles</p>
+                                        <a href="/profiles" class="btn btn-outline-primary">Go to Profiles</a>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-4">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <i class="bi bi-gear display-4 text-primary mb-3"></i>
+                                        <h3>Test Page</h3>
+                                        <p>Access test features and tools</p>
+                                        <a href="/test" class="btn btn-outline-primary">Go to Test Page</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

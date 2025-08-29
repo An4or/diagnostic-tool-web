@@ -1,0 +1,367 @@
+package com.intervale.diagnostictool.service;
+
+import com.intervale.diagnostictool.exception.ResourceNotFoundException;
+import com.intervale.diagnostictool.model.*;
+import com.intervale.diagnostictool.model.Device.ArchitectureType;
+import com.intervale.diagnostictool.repository.*;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+public class ProfileService {
+    private final ProfileRepository profileRepository;
+    private final DeviceRepository deviceRepository;
+    private final DiagnosticMethodRepository diagnosticMethodRepository;
+    private final ProfileDiagnosticMethodRepository profileDiagnosticMethodRepository;
+    private final DeviceService deviceService;
+
+    @Transactional(readOnly = true)
+    public List<Profile> findAll() {
+        return profileRepository.findAll();
+    }
+    
+    @Transactional(readOnly = true)
+    public List<Profile> findAllWithDetails() {
+        return profileRepository.findAll().stream()
+                .map(profile -> profileRepository.findByIdWithAllDetails(profile.getId())
+                        .orElse(profile))
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public Profile findById(Long id) {
+        return profileRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Profile not found with id: " + id));
+    }
+    
+    @Transactional(readOnly = true)
+    public Profile findByIdWithDetails(Long id) {
+        return profileRepository.findByIdWithAllDetails(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Profile not found with id: " + id));
+    }
+
+    @Transactional
+    public Profile create(Profile profile, Set<Long> deviceIds, Map<Long, Set<Long>> deviceMethods) {
+        // Set default architecture type if not provided
+        if (profile.getArchitectureType() == null) {
+            profile.setArchitectureType(ArchitectureType.ONE_OUT_OF_ONE);
+        }
+        if (profileRepository.existsByName(profile.getName())) {
+            throw new IllegalStateException("Profile with name " + profile.getName() + " already exists");
+        }
+        
+        // Set default values
+        profile.setCreatedAt(LocalDateTime.now());
+        profile.setUpdatedAt(LocalDateTime.now());
+        
+        Profile savedProfile = profileRepository.save(profile);
+        
+        // Add devices to profile
+        if (deviceIds != null && !deviceIds.isEmpty()) {
+            // Get all devices with their diagnostic methods in one query
+            List<Device> devices = deviceRepository.findByIdsWithDiagnosticMethods(deviceIds);
+            
+            for (Device device : devices) {
+                savedProfile.addDevice(device);
+                
+                // Add selected diagnostic methods for this device
+                if (deviceMethods != null && deviceMethods.containsKey(device.getId())) {
+                    Set<Long> methodIds = deviceMethods.get(device.getId());
+                    if (methodIds != null && !methodIds.isEmpty()) {
+                        for (Long methodId : methodIds) {
+                            // Check if the method is valid for this device
+                            boolean methodExists = device.getDiagnosticMethods().stream()
+                                    .anyMatch(m -> m.getId().equals(methodId));
+                                    
+                            if (methodExists) {
+                                DiagnosticMethod method = diagnosticMethodRepository.findById(methodId)
+                                        .orElseThrow(() -> new ResourceNotFoundException("Diagnostic method not found with id: " + methodId));
+                                
+                                savedProfile.addDiagnosticMethod(device, method);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Calculate PFD and SIL after all devices and methods are added
+            calculateAndUpdateProfileMetrics(savedProfile);
+            profileRepository.save(savedProfile);
+        }
+        
+        return savedProfile;
+    }
+
+    @Transactional
+    public Profile update(Long id, Profile profileDetails, Set<Long> deviceIds, Map<Long, Set<Long>> deviceMethods) {
+        Profile profile = findById(id);
+        
+        if (!profile.getName().equals(profileDetails.getName()) && 
+            profileRepository.existsByName(profileDetails.getName())) {
+            throw new IllegalStateException("Profile with name " + profileDetails.getName() + " already exists");
+        }
+        
+        // Ensure architecture type is set
+        if (profileDetails.getArchitectureType() == null) {
+            profile.setArchitectureType(ArchitectureType.ONE_OUT_OF_ONE);
+        } else {
+            profile.setArchitectureType(profileDetails.getArchitectureType());
+        }
+        
+        profile.setName(profileDetails.getName());
+        profile.setDescription(profileDetails.getDescription());
+        profile.setUpdatedAt(LocalDateTime.now());
+        
+        // Update devices
+        if (deviceIds != null) {
+            profile.getDevices().clear();
+            Set<Device> devices = new HashSet<>(deviceRepository.findAllByIdIn(deviceIds));
+            devices.forEach(profile::addDevice);
+        }
+        
+        // Update diagnostic methods for devices
+        if (deviceMethods != null) {
+            for (Map.Entry<Long, Set<Long>> entry : deviceMethods.entrySet()) {
+                Long deviceId = entry.getKey();
+                Set<Long> methodIds = entry.getValue();
+                
+                Device device = deviceService.findById(deviceId);
+                profile.getDeviceDiagnosticMethods().removeIf(pdm -> pdm.getDevice().equals(device));
+                
+                if (methodIds != null && !methodIds.isEmpty()) {
+                    List<DiagnosticMethod> methods = diagnosticMethodRepository.findAllById(methodIds);
+                    
+                    // Filter methods to only include those that belong to the device's category
+                    methods = methods.stream()
+                            .filter(method -> method.getDeviceCategory().equals(device.getCategory()))
+                            .collect(Collectors.toList());
+                    
+                    // Create new profile-diagnostic-method associations
+                    for (DiagnosticMethod method : methods) {
+                        profile.addDiagnosticMethod(device, method);
+                    }
+                }
+            }
+        }
+        
+        // Recalculate metrics
+        calculateAndUpdateProfileMetrics(profile);
+        return profileRepository.save(profile);
+    }
+
+    @Transactional
+    public void delete(Long id) {
+        Profile profile = findById(id);
+        // This will cascade delete all related profile_diagnostic_methods entries
+        profileRepository.delete(profile);
+    }
+    
+    @Transactional
+    public Profile addDeviceToProfile(Long profileId, Long deviceId, Set<Long> methodIds) {
+        Profile profile = findById(profileId);
+        Device device = deviceService.findById(deviceId);
+        
+        // Check if device is already in profile
+        if (profile.getDevices().contains(device)) {
+            throw new IllegalStateException("Device is already in this profile");
+        }
+        
+        profile.addDevice(device);
+        
+        // Add selected diagnostic methods
+        if (methodIds != null && !methodIds.isEmpty()) {
+            List<DiagnosticMethod> methods = diagnosticMethodRepository.findAllById(methodIds);
+            
+            // Filter methods to only include those that belong to the device's category
+            methods = methods.stream()
+                    .filter(method -> method.getDeviceCategory().equals(device.getCategory()))
+                    .collect(Collectors.toList());
+            
+            // Create profile-diagnostic-method associations
+            for (DiagnosticMethod method : methods) {
+                profile.addDiagnosticMethod(device, method);
+            }
+        }
+        
+        // Recalculate metrics
+        calculateAndUpdateProfileMetrics(profile);
+        return profileRepository.save(profile);
+    }
+    
+    @Transactional
+    public Profile updateDeviceMethods(Long profileId, Long deviceId, Set<Long> methodIds) {
+        Profile profile = findById(profileId);
+        Device device = deviceService.findById(deviceId);
+        
+        // Remove all existing method associations for this device in the profile
+        profile.getDeviceDiagnosticMethods().removeIf(pdm -> pdm.getDevice().equals(device));
+        
+        // Add the new method associations
+        if (methodIds != null && !methodIds.isEmpty()) {
+            List<DiagnosticMethod> methods = diagnosticMethodRepository.findAllById(methodIds);
+            
+            // Filter methods to only include those that belong to the device's category
+            methods = methods.stream()
+                    .filter(method -> method.getDeviceCategory().equals(device.getCategory()))
+                    .collect(Collectors.toList());
+            
+            // Create new profile-diagnostic-method associations
+            for (DiagnosticMethod method : methods) {
+                profile.addDiagnosticMethod(device, method);
+            }
+        }
+        
+        // Recalculate metrics
+        calculateAndUpdateProfileMetrics(profile);
+        return profileRepository.save(profile);
+    }
+    
+    @Transactional
+    public void removeDeviceFromProfile(Long profileId, Long deviceId) {
+        Profile profile = findById(profileId);
+        Device device = deviceService.findById(deviceId);
+        
+        // This will also remove all associated profile_diagnostic_methods entries for this device
+        profile.removeDevice(device);
+        
+        // Recalculate metrics
+        calculateAndUpdateProfileMetrics(profile);
+        profileRepository.save(profile);
+    }
+    
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> getAvailableDiagnosticMethods(Long profileId, Long deviceId) {
+        Profile profile = findById(profileId);
+        Device device = deviceRepository.findById(deviceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Device not found with id: " + deviceId));
+        
+        // Get all methods available for this device's category
+        List<DiagnosticMethod> availableMethods = 
+            diagnosticMethodRepository.findByDeviceCategory(device.getCategory());
+            
+        // Get methods already selected for this device in this profile
+        Set<Long> selectedMethodIds = profile.getDeviceDiagnosticMethods().stream()
+                .filter(pdm -> pdm.getDevice().equals(device))
+                .map(pdm -> pdm.getDiagnosticMethod().getId())
+                .collect(Collectors.toSet());
+        
+        // Create a list of maps with method details and selection state
+        return availableMethods.stream()
+                .map(method -> {
+                    Map<String, Object> methodMap = new HashMap<>();
+                    methodMap.put("id", method.getId());
+                    methodMap.put("name", method.getName());
+                    methodMap.put("description", method.getDescription());
+                    methodMap.put("effectiveness", method.getEffectiveness());
+                    methodMap.put("diagnosticCoverage", method.getDiagnosticCoverage());
+                    methodMap.put("suitability", method.getSuitability());
+                    methodMap.put("gostReference", method.getGostReference());
+                    methodMap.put("selected", selectedMethodIds.contains(method.getId()));
+                    return methodMap;
+                })
+                .collect(Collectors.toList());
+    }
+    
+    @Transactional
+    public void calculateAndUpdateProfileMetrics(Profile profile) {
+        if (profile.getDevices().isEmpty()) {
+            profile.setPfdAvg(null);
+            profile.setPfdMax(null);
+            profile.setSilLevel(null);
+            return;
+        }
+        
+        // Calculate PFD for each device based on its architecture and diagnostic methods
+        Map<Device, Double> devicePfdValues = new HashMap<>();
+        
+        for (Device device : profile.getDevices()) {
+            // Get all diagnostic methods for this device in this profile
+            Set<DiagnosticMethod> methods = profile.getDeviceDiagnosticMethods().stream()
+                    .filter(pdm -> pdm.getDevice().equals(device))
+                    .map(pdm -> pdm.getDiagnosticMethod())
+                    .collect(Collectors.toSet());
+            
+            // Calculate PFD for this device based on its architecture
+            double pfd = calculatePfdForDevice(device, methods);
+            devicePfdValues.put(device, pfd);
+        }
+        
+        // Calculate overall PFD for the profile
+        double pfdAvg = devicePfdValues.values().stream()
+                .mapToDouble(Double::doubleValue)
+                .average()
+                .orElse(0.0);
+                
+        double pfdMax = devicePfdValues.values().stream()
+                .mapToDouble(Double::doubleValue)
+                .max()
+                .orElse(0.0);
+        
+        // Determine SIL level based on PFDavg (using IEC 61508 standard)
+        Integer silLevel = determineSilLevel(pfdAvg);
+        
+        // Update profile with calculated values
+        profile.setPfdAvg(pfdAvg);
+        profile.setPfdMax(pfdMax);
+        profile.setSilLevel(silLevel);
+        profile.setUpdatedAt(LocalDateTime.now());
+    }
+    
+    /**
+     * Calculates PFD for a single device based on its architecture and diagnostic methods.
+     */
+    private double calculatePfdForDevice(Device device, Set<DiagnosticMethod> methods) {
+        // Base failure rate (λ) - this would typically come from device specifications
+        double lambda = 1E-6; // Example: 1E-6 failures per hour
+        
+        // Calculate diagnostic coverage factor (DC) from methods
+        double diagnosticCoverage = methods.stream()
+                .mapToDouble(method -> {
+                    // Convert coverage percentage to fraction (0-1)
+                    return method.getCoveragePercent() != null ? 
+                           method.getCoveragePercent() / 100.0 : 0.0;
+                })
+                .max()
+                .orElse(0.0);
+        
+        // Calculate PFD based on architecture
+        double pfd = 0.0;
+        
+        switch (device.getArchitectureType()) {
+            case ONE_OUT_OF_ONE: // 1oo1
+                pfd = (lambda * (1 - diagnosticCoverage)) / 2;
+                break;
+                
+            case ONE_OUT_OF_TWO: // 1oo2
+                pfd = Math.pow((lambda * (1 - diagnosticCoverage)), 2) * 
+                      (1.0 / 3.0);
+                break;
+                
+            case TWO_OUT_OF_THREE: // 2oo3
+                pfd = 3 * Math.pow((lambda * (1 - diagnosticCoverage)), 2);
+                break;
+                
+            default:
+                pfd = (lambda * (1 - diagnosticCoverage)) / 2;
+        }
+        
+        return pfd;
+    }
+    
+    /**
+     * Determines SIL level based on PFD value according to IEC 61508.
+     */
+    private Integer determineSilLevel(double pfd) {
+        if (pfd >= 1E-2) return null;  // No SIL level
+        if (pfd >= 1E-3) return 1;     // SIL 1: 1E-3 ≤ PFDavg < 1E-2
+        if (pfd >= 1E-4) return 2;     // SIL 2: 1E-4 ≤ PFDavg < 1E-3
+        if (pfd >= 1E-5) return 3;     // SIL 3: 1E-5 ≤ PFDavg < 1E-4
+        return 4;                      // SIL 4: PFDavg < 1E-5
+    }
+}
