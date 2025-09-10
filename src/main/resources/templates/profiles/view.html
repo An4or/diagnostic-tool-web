@@ -197,16 +197,15 @@
                             <thead class="table-light">
                                 <tr>
                                     <th>Device</th>
-<!--                                    <th>Category</th>-->
+                                    <th>Category</th>
                                     <th>Available Diagnostic Methods</th>
                                     <th>Type Faults</th>
-                                    <th>Results</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr th:each="device : ${profile.devices}">
                                     <td th:text="${device.name}">Device Name</td>
-<!--                                    <td th:text="${device.category?.name ?: 'N/A'}">Category</td>-->
+                                    <td th:text="${device.category?.name ?: 'N/A'}">Category</td>
                                     <td>
                                         <div class="methods-container">
                                             <th:block th:each="deviceWithFaults : ${devicesWithFaults}" th:if="${deviceWithFaults.device.id == device.id}">
@@ -251,54 +250,59 @@
                                             </th:block>
                                         </div>
                                     </td>
-                                    <td style="min-width: 300px;">
-                                        <div class="results-container">
-                                            <div class="table-responsive">
-                                                <table class="table table-bordered table-sm">
-                                                    <thead class="table-light">
-                                                        <tr>
-                                                            <th rowspan="2" class="align-middle">Доля безопасных отказов элемента</th>
-                                                            <th colspan="3" class="text-center">Отказоустойчивость аппаратных средств</th>
-                                                        </tr>
-                                                        <tr>
-                                                            <th>N = 0</th>
-                                                            <th>N = 1</th>
-                                                            <th>N = 2</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        <tr>
-                                                            <td>менее 60%</td>
-                                                            <td> - </td>
-                                                            <td>УПБ 1</td>
-                                                            <td>УПБ 2</td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td>от 60% до менее 90%</td>
-                                                            <td>УПБ 1</td>
-                                                            <td>УПБ 2</td>
-                                                            <td>УПБ 3</td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td>от 90% до менее 99%</td>
-                                                            <td>УПБ 2</td>
-                                                            <td>УПБ 3</td>
-                                                            <td>УПБ 4</td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td>более и равно 99%</td>
-                                                            <td>УПБ 2</td>
-                                                            <td>УПБ 4</td>
-                                                            <td>УПБ 4</td>
-                                                        </tr>
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        </div>
-                                    </td>
                                 </tr>
                             </tbody>
                         </table>
+                    </div>
+                </div>
+
+                <!-- Moved Safety Table Here -->
+                <div class="card mt-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">Таблица определения УПБ (Уровня полноты безопасности)</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-sm">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th rowspan="2" class="align-middle">Доля безопасных отказов элемента</th>
+                                        <th colspan="3" class="text-center">Отказоустойчивость аппаратных средств</th>
+                                    </tr>
+                                    <tr>
+                                        <th>N = 0</th>
+                                        <th>N = 1</th>
+                                        <th>N = 2</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>менее 60%</td>
+                                        <td> - </td>
+                                        <td>УПБ 1</td>
+                                        <td>УПБ 2</td>
+                                    </tr>
+                                    <tr>
+                                        <td>от 60% до менее 90%</td>
+                                        <td>УПБ 1</td>
+                                        <td>УПБ 2</td>
+                                        <td>УПБ 3</td>
+                                    </tr>
+                                    <tr>
+                                        <td>от 90% до менее 99%</td>
+                                        <td>УПБ 2</td>
+                                        <td>УПБ 3</td>
+                                        <td>УПБ 4</td>
+                                    </tr>
+                                    <tr>
+                                        <td>более и равно 99%</td>
+                                        <td>УПБ 2</td>
+                                        <td>УПБ 4</td>
+                                        <td>УПБ 4</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
@@ -564,14 +568,8 @@
             const n = architecture === 'ONE_OUT_OF_ONE' ? 0 : 
                       architecture === 'ONE_OUT_OF_TWO' ? 1 : 2;
             
-            // Clear all previous highlights and reset SIL values
+            // Clear all previous highlights
             $('.safety-table td').removeClass('table-primary fw-bold');
-            
-            // Clear all SIL values in the table
-            $('.safety-table tbody tr').each(function() {
-                const $row = $(this);
-                $row.find('td:not(:first-child)').text('-');
-            });
             
             // Find the row that matches the current coverage range
             let targetRow = null;
@@ -590,23 +588,10 @@
             
             if (!targetRow) return; // No matching row found
             
-            // Calculate the SIL for the current architecture and coverage
-            let sil = '-';
-            if (coveragePercent < 60) {
-                sil = n >= 1 ? 'УПБ 1' : '-';
-                if (n >= 2) sil = 'УПБ 2';
-            } else if (coveragePercent < 90) {
-                sil = n === 0 ? 'УПБ 1' : n === 1 ? 'УПБ 2' : 'УПБ 3';
-            } else if (coveragePercent < 99) {
-                sil = n === 0 ? 'УПБ 2' : n === 1 ? 'УПБ 3' : 'УПБ 4';
-            } else {
-                sil = n === 0 ? 'УПБ 2' : 'УПБ 4';
-            }
-            
             // Find and highlight the specific cell
             const cellIndex = n + 1; // +1 because first column is the range
             const $cell = targetRow.find(`td:eq(${cellIndex})`);
-            $cell.addClass('table-primary fw-bold').text(sil);
+            $cell.addClass('table-primary fw-bold');
         }
         </script>
         <script src="https://cdn.jsdelivr.net/npm/bootstrap-select@1.14.0-beta2/dist/js/bootstrap-select.min.js"></script>
