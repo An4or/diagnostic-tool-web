@@ -15,68 +15,68 @@
             color: #212529;
             background-color: #f8f9fa;
         }
-        
+
         .card {
             margin-bottom: 1.5rem;
             box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
             border: 1px solid rgba(0, 0, 0, 0.05);
         }
-        
+
         .card-header {
             background-color: #f8f9fa;
             border-bottom: 1px solid rgba(0, 0, 0, 0.05);
             padding: 1rem 1.25rem;
         }
-        
+
         .card-body {
             padding: 1.25rem;
         }
-        
+
         .table {
             width: 100%;
             margin-bottom: 1rem;
             color: #212529;
             border-collapse: collapse;
         }
-        
+
         .table th,
         .table td {
             padding: 0.75rem;
             vertical-align: top;
             border-top: 1px solid #dee2e6;
         }
-        
+
         .table thead th {
             vertical-align: bottom;
             border-bottom: 2px solid #dee2e6;
             background-color: #f8f9fa;
         }
-        
+
         .table-bordered {
             border: 1px solid #dee2e6;
         }
-        
+
         .table-bordered th,
         .table-bordered td {
             border: 1px solid #dee2e6;
         }
-        
+
         .table-hover tbody tr:hover {
             background-color: rgba(0, 0, 0, 0.05);
         }
-        
+
         .table-sm th,
         .table-sm td {
             padding: 0.3rem;
         }
-        
+
         .table-responsive {
             display: block;
             width: 100%;
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
         }
-        
+
         .method-container {
             padding: 10px;
             background-color: #f8f9fa;
@@ -92,35 +92,42 @@
             border-left: 4px solid #6c757d;
             border-radius: 2px;
         }
-        
+
         /* Style for the select options */
         .form-select option {
             padding: 8px 12px !important;
             margin: 2px 0;
         }
-        
+
+        /* Dropdown styling: fixed width, same margins */
+        .diagnostic-method-select {
+            width: 300px;
+            margin: 0 auto;
+            display: block;
+        }
+
         /* Coverage level styles */
         .coverage-LOW {
             background-color: #fff3cd80;
             border-left: 3px solid #ffc107;
         }
-        
+
         .coverage-MEDIUM {
             background-color: #cce5ff80;
             border-left: 3px solid #0d6efd;
         }
-        
+
         .coverage-HIGH {
             background-color: #d4edda80;
             border-left: 3px solid #198754;
         }
-        
+
         /* Safety table styles */
         .safety-table tbody tr.table-primary td {
             background-color: #cfe2ff;
             font-weight: 600;
         }
-        
+
         /* Method item styles */
         .method-item {
             display: flex;
@@ -130,221 +137,21 @@
             border-radius: 0.25rem;
             transition: background-color 0.15s ease-in-out;
         }
-        
+
         .method-item:hover {
             background-color: #f8f9fa;
         }
-        
+
         .method-checkbox {
             margin-right: 0.5rem;
         }
-        
+
         .method-label {
             margin-bottom: 0;
             font-weight: 400;
             cursor: pointer;
         }
-    </style>
-</head>
-<body>
-    <div layout:fragment="content">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1><i class="bi bi-person-lines-fill me-2"></i>Profile Details</h1>
-            <div>
-                <a th:href="@{/profiles}" class="btn btn-outline-secondary me-2">
-                    <i class="bi bi-arrow-left me-1"></i> Back to List
-                </a>
-                <a th:href="@{/profiles/{id}/edit(id=${profile.id})}" class="btn btn-primary">
-                    <i class="bi bi-pencil-square me-1"></i> Edit Profile
-                </a>
-            </div>
-        </div>
 
-        <div class="card">
-            <div class="card-header bg-light">
-                <h5 class="mb-0" th:text="${profile.name}">Profile Name</h5>
-            </div>
-            <div class="card-body">
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <h6>Description</h6>
-                        <p class="text-muted" th:if="${profile.description == null || profile.description.isEmpty()}">
-                            No description provided
-                        </p>
-                        <p th:if="${profile.description != null && !profile.description.isEmpty()}" 
-                           th:text="${profile.description}"></p>
-                    </div>
-                    <div class="col-md-6">
-                        <h6>Architecture Type</h6>
-                        <select class="form-select" id="architectureType">
-                            <option value="">Select Architecture Type</option>
-                            <option th:each="type : ${T(com.intervale.diagnostictool.model.Device.ArchitectureType).values()}"
-                                    th:value="${type}"
-                                    th:text="${@architectureTypeFormatter.format(type)}"
-                                    th:selected="${profile.architectureType == type}">
-                            </option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="mb-4">
-                    <h6>Devices and Diagnostic Methods</h6>
-                    <div th:if="${profile.devices.isEmpty()}" class="alert alert-info">
-                        No devices added to this profile.
-                    </div>
-                    <div th:if="!${profile.devices.isEmpty()}" class="table-responsive">
-                        <table class="table table-hover">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Device</th>
-                                    <th>Category</th>
-                                    <th>Available Diagnostic Methods</th>
-                                    <th>Type Faults</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr th:each="device : ${profile.devices}">
-                                    <td th:text="${device.name}">Device Name</td>
-                                    <td th:text="${device.category?.name ?: 'N/A'}">Category</td>
-                                    <td>
-                                        <div class="methods-container">
-                                            <th:block th:each="deviceWithFaults : ${devicesWithFaults}" th:if="${deviceWithFaults.device.id == device.id}">
-                                                <div th:each="method : ${deviceWithFaults.diagnosticMethods}"
-                                                     th:class="'method-item coverage-' + ${method.coverageLevel}"
-                                                     th:data-coverage-level="${method.coverageLevel}"
-                                                     th:data-coverage-percent="${method.coveragePercent}">
-                                                    <input type="checkbox"
-                                                           th:id="'method-' + ${device.id} + '-' + ${method.id}"
-                                                           th:name="selectedMethods"
-                                                           th:value="${method.id}"
-                                                           class="method-checkbox form-check-input">
-                                                    <label th:for="'method-' + ${device.id} + '-' + ${method.id}"
-                                                           class="method-label">
-                                                        <span th:text="${method.name + ' (' + method.coverageLevel + ', ' + method.coveragePercent + '%)'}"></span>
-                                                    </label>
-                                                </div>
-                                            </th:block>
-                                        </div>
-                                    </td>
-                                    <td style="min-width: 250px;">
-                                        <div class="methods-container">
-                                            <th:block th:each="deviceWithFaults : ${devicesWithFaults}" th:if="${deviceWithFaults.device.id == device.id}">
-                                                <div th:each="fault : ${deviceWithFaults.faults}"
-                                                     th:class="'method-item coverage-' + ${fault.faultType.coverageRequirement}"
-                                                     th:data-coverage-level="${fault.faultType.coverageRequirement}"
-                                                     th:data-coverage-percent="0">  <!-- Default value since faults might not have a percentage -->
-                                                    <input type="checkbox"
-                                                           th:checked="${fault.covered}"
-                                                           th:data-profile-id="${profile.id}"
-                                                           th:data-device-id="${device.id}"
-                                                           th:data-fault-id="${fault.faultType.id}"
-                                                           class="fault-checkbox form-check-input">
-                                                    <label class="method-label">
-                                                        <span th:text="${fault.faultType.name + ' (' + fault.faultType.coverageRequirement + ')'}"></span>
-                                                    </label>
-                                                </div>
-                                                <div th:if="${deviceWithFaults.faults == null || deviceWithFaults.faults.isEmpty()}" 
-                                                     class="text-muted">
-                                                    Нет неисправностей
-                                                </div>
-                                            </th:block>
-                                        </div>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Moved Safety Table Here -->
-                <div class="card mt-4">
-                    <div class="card-header bg-light">
-                        <h5 class="mb-0">Таблица определения УПБ (Уровня полноты безопасности)</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-bordered table-sm">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th rowspan="2" class="align-middle">Доля безопасных отказов элемента</th>
-                                        <th colspan="3" class="text-center">Отказоустойчивость аппаратных средств</th>
-                                    </tr>
-                                    <tr>
-                                        <th>N = 0</th>
-                                        <th>N = 1</th>
-                                        <th>N = 2</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td>менее 60%</td>
-                                        <td> - </td>
-                                        <td>УПБ 1</td>
-                                        <td>УПБ 2</td>
-                                    </tr>
-                                    <tr>
-                                        <td>от 60% до менее 90%</td>
-                                        <td>УПБ 1</td>
-                                        <td>УПБ 2</td>
-                                        <td>УПБ 3</td>
-                                    </tr>
-                                    <tr>
-                                        <td>от 90% до менее 99%</td>
-                                        <td>УПБ 2</td>
-                                        <td>УПБ 3</td>
-                                        <td>УПБ 4</td>
-                                    </tr>
-                                    <tr>
-                                        <td>более и равно 99%</td>
-                                        <td>УПБ 2</td>
-                                        <td>УПБ 4</td>
-                                        <td>УПБ 4</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="row mt-4">
-                    <div class="col-12">
-                        <div class="card bg-light">
-                            <div class="card-body">
-                                <!-- CSRF Token - Using th:if to handle cases where CSRF might be disabled -->
-                                <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" id="csrfToken" />
-                                <input type="hidden" th:unless="${_csrf != null}" name="_csrf" value="" id="csrfToken" />
-                                <h5 class="card-title">Profile Information</h5>
-                                <dl class="row">
-                                    <dt class="col-sm-3">ID</dt>
-                                    <dd class="col-sm-9" th:text="${profile.id}">-</dd>
-
-                                    <th:block th:if="${profile.createdAt != null}">
-                                        <dt class="col-sm-3">Created</dt>
-                                        <dd class="col-sm-9" th:text="${#temporals.format(profile.createdAt, 'dd.MM.yyyy HH:mm')}">-</dd>
-                                    </th:block>
-
-                                    <th:block th:if="${profile.updatedAt != null}">
-                                        <dt class="col-sm-3">Last Updated</dt>
-                                        <dd class="col-sm-9" th:text="${#temporals.format(profile.updatedAt, 'dd.MM.yyyy HH:mm')}">-</dd>
-                                    </th:block>
-                                </dl>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-            </div>
-            <div class="card-footer text-end">
-                <a th:href="@{/profiles}" class="btn btn-outline-secondary me-2">
-                    <i class="bi bi-arrow-left me-1"></i> Back to List
-                </a>
-                <a th:href="@{/profiles/{id}/edit(id=${profile.id})}" class="btn btn-primary">
-                    <i class="bi bi-pencil-square me-1"></i> Edit Profile
-                </a>
-            </div>
-            </div>
-
-    <style>
         /* Style for the methods container */
         .methods-container {
             min-width: 300px;
@@ -354,7 +161,7 @@
             border-radius: 0.375rem;
             padding: 0.5rem;
         }
-        
+
         .method-item {
             display: flex;
             align-items: center;
@@ -362,318 +169,1156 @@
             margin: 0.125rem 0;
             border-radius: 0.25rem;
         }
-        
+
         .method-checkbox {
             margin-right: 0.5rem;
         }
-        
+
         .method-label {
             flex-grow: 1;
         }
-        
+
         .coverage-LOW {
             background-color: #ffc10740; /* Yellow with opacity */
             border-left: 3px solid #ffc107;
         }
-        
+
         .coverage-MEDIUM {
             background-color: #0dcaf040; /* Blue with opacity */
             border-left: 3px solid #0dcaf0;
         }
-        
+
         .coverage-HIGH {
             background-color: #19875440; /* Green with opacity */
             border-left: 3px solid #198754;
         }
-        
+
         /* Safety table styles */
         .safety-table tbody tr.table-primary td {
             background-color: #cfe2ff;
             font-weight: bold;
         }
+
+        /* Simple table sorting styles */
+        .sortable {
+            cursor: pointer;
+            position: relative;
+            padding-right: 20px;
+        }
+        .sortable:after {
+            content: '⇅';
+            position: absolute;
+            right: 5px;
+            opacity: 0.5;
+        }
+        .sort-asc:after {
+            content: '↑';
+            opacity: 1;
+        }
+        .sort-desc:after {
+            content: '↓';
+            opacity: 1;
+        }
+
+        /* Hide number input spinners */
+        input[type=number]::-webkit-outer-spin-button,
+        input[type=number]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+
+        /* Fault item layout for alignment */
+        .fault-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .name-part {
+            flex: 1 1 auto;
+            min-width: 0;
+            word-wrap: break-word;
+            word-break: break-word;
+            margin-bottom: 0.5rem;
+        }
+
+        .diagnostics-part {
+            flex: 0 0 310px;
+            margin-bottom: 1rem;
+        }
+
+        .method-label {
+            display: block;
+            font-weight: 500;
+        }
     </style>
-    
+</head>
+<body>
+<div layout:fragment="content">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="bi bi-person-lines-fill me-2"></i>Детали профиля</h1>
+        <div>
+            <a th:href="@{/profiles}" class="btn btn-outline-secondary me-2">
+                <i class="bi bi-arrow-left me-1"></i> Back to List
+            </a>
+            <a th:href="@{/profiles/{id}/edit(id=${profile.id})}" class="btn btn-primary">
+                <i class="bi bi-pencil-square me-1"></i> Edit Profile
+            </a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header bg-light">
+            <h5 class="mb-0" th:text="${profile.name}">Profile Name</h5>
+        </div>
+        <div class="card-body">
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <h6>Описание</h6>
+                    <p class="text-muted" th:if="${profile.description == null || profile.description.isEmpty()}">
+                        No description provided
+                    </p>
+                    <p th:if="${profile.description != null && !profile.description.isEmpty()}"
+                       th:text="${profile.description}"></p>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <h6>Устройства и диагностические методы</h6>
+                <div th:if="${profile.devices.isEmpty()}" class="alert alert-info">
+                    No devices added to this profile.
+                </div>
+                <div th:if="!${profile.devices.isEmpty()}" class="table-responsive">
+                    <table id="devicesTable" class="table table-hover" style="width:100%">
+                        <colgroup>
+                            <col style="width: 20%">
+                            <col style="width: 20%">
+                            <col style="width: 60%">
+                        </colgroup>
+                        <thead class="table-light">
+                        <tr>
+                            <th class="sortable" data-sort="category">Категория</th>
+                            <th class="sortable" data-sort="device">Устройства</th>
+                            <th>Типы неисправностей и диагностические методы</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="device : ${profile.devices}">
+                            <td th:text="${device.category?.name ?: 'N/A'}">Category</td>
+                            <td th:text="${device.name}">Device Name</td>
+                            <td style="min-width: 400px;">
+                                <div class="faults-container">
+                                    <th:block th:each="deviceWithFaults : ${devicesWithFaults}" th:if="${deviceWithFaults.device.id == device.id}">
+                                        <div th:each="fault : ${deviceWithFaults.faults}"
+                                             th:class="'fault-item coverage-' + ${fault.faultType.coverageRequirement}"
+                                             th:data-coverage-level="${fault.faultType.coverageRequirement}"
+                                             th:data-coverage-percent="0">
+                                            <div class="name-part">
+                                                <label class="method-label mb-0">
+                                                    <span th:text="${fault.faultType.name + ' (' + fault.faultType.coverageRequirement + ')'}"></span>
+                                                </label>
+                                            </div>
+                                            <div class="diagnostics-part">
+                                                <select class="form-select form-select-sm diagnostic-method-select"
+                                                        th:data-fault-id="${fault.faultType.id}"
+                                                        th:data-device-id="${device.id}">
+                                                    <option value="">Выберите метод диагностики</option>
+                                                    <th:block th:each="method : ${deviceWithFaults.diagnosticMethods}">
+                                                        <option th:value="${method.id}"
+                                                                th:text="${method.name + ' (' + method.coverageLevel + ')'}">
+                                                        </option>
+                                                    </th:block>
+                                                </select>
+                                                <div class="mt-2 d-flex align-items-center">
+                                                    <small class="text-muted me-2">Покрытие:</small>
+                                                    <div class="input-group input-group-sm" style="width: 120px;">
+                                                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="adjustPercentage(this, -1)">-</button>
+                                                        <input type="number" class="form-control form-control-sm text-center coverage-percent"
+                                                               th:data-fault-id="${fault.faultType.id}"
+                                                               th:data-device-id="${device.id}"
+                                                               value="0"
+                                                               min="0" max="100" step="1"
+                                                               readonly
+                                                               style="-moz-appearance: textfield;">
+                                                        <span class="input-group-text">%</span>
+                                                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="adjustPercentage(this, 1)">+</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div th:if="${deviceWithFaults.faults == null || deviceWithFaults.faults.isEmpty()}"
+                                             class="text-muted">
+                                            Нет неисправностей
+                                        </div>
+                                    </th:block>
+                                </div>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Таблица расчета неисправностей -->
+            <div class="card mt-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Таблица расчета неисправностей</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead class="table-light">
+                            <tr>
+                                <th>Устройства</th>
+                                <th>S</th>
+                                <th>D</th>
+                                <th>DC<sub>COMP</sub></th>
+                                <th>λ</th>
+                                <th>λ<sub>S</sub></th>
+                                <th>λ<sub>D</sub></th>
+                                <th>λ<sub>DD</sub>+λ<sub>DU</sub></th>
+                                <th>λ<sub>S</sub>+λ<sub>DD</sub></th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="device : ${profile.devices}" th:data-device-id="${device.id}">
+                                <td th:text="${device.name}"></td>
+                                <td class="s-value-cell">
+                                    <div class="input-group input-group-sm" style="width: 100px;">
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="adjustSValue(this, -1)">-</button>
+                                        <input type="number" class="form-control form-control-sm text-center s-value"
+                                               value="0.5" min="0" max="1" step="0.1"
+                                               style="width: 50px; -moz-appearance: textfield;">
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="adjustSValue(this, 1)">+</button>
+                                    </div>
+                                </td>
+                                <td class="d-value-cell">
+                                    <input type="number" class="form-control form-control-sm text-center d-value"
+                                           value="0.5" readonly style="width: 80px;">
+                                </td>
+                                <td class="dc-comp-cell">0</td>
+                                <td>
+                                    <input type="number" class="form-control form-control-sm text-center lambda-value"
+                                           value="10" min="0" step="0.1"
+                                           style="width: 80px; -moz-appearance: textfield;">
+                                </td>
+                                <td class="calculated" data-formula="s*lambda"></td>
+                                <td class="calculated" data-formula="d*lambda"></td>
+                                <td class="calculated" data-formula="lambda_dd_du">0</td>
+                                <td class="calculated" data-formula="lambda_s_plus_lambda_dd">-</td>
+                            </tr>
+                            <tr>
+                                <td colspan="9" class="small text-muted" id="upb-summary">
+                                    УПБ = -- (формула не рассчитана)
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Таблица определения УПБ (Уровня полноты безопасности) -->
+            <div class="card mt-4">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Таблица определения УПБ (Уровня полноты безопасности)</h5>
+                    <div class="d-flex align-items-center">
+                        <label class="mb-0 me-2">Тип архитектуры:</label>
+                        <select class="form-select form-select-sm" id="architectureType" style="width: auto;">
+                            <option value="">Выберите тип архитектуры</option>
+                            <option th:each="type : ${T(com.intervale.diagnostictool.model.Device.ArchitectureType).values()}"
+                                    th:value="${type}"
+                                    th:text="${@architectureTypeFormatter.format(type)}"
+                                    th:selected="${profile.architectureType == type}">
+                            </option>
+                        </select>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-sm safety-table">
+                            <thead class="table-light">
+                            <tr>
+                                <th rowspan="2" class="align-middle">Доля безопасных отказов элемента</th>
+                                <th colspan="3" class="text-center">Отказоустойчивость аппаратных средств</th>
+                            </tr>
+                            <tr>
+                                <th>N = 0</th>
+                                <th>N = 1</th>
+                                <th>N = 2</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr>
+                                <td>менее 60%</td>
+                                <td> - </td>
+                                <td>УПБ 1</td>
+                                <td>УПБ 2</td>
+                            </tr>
+                            <tr>
+                                <td>от 60% до менее 90%</td>
+                                <td>УПБ 1</td>
+                                <td>УПБ 2</td>
+                                <td>УПБ 3</td>
+                            </tr>
+                            <tr>
+                                <td>от 90% до менее 99%</td>
+                                <td>УПБ 2</td>
+                                <td>УПБ 3</td>
+                                <td>УПБ 4</td>
+                            </tr>
+                            <tr>
+                                <td>более и равно 99%</td>
+                                <td>УПБ 2</td>
+                                <td>УПБ 4</td>
+                                <td>УПБ 4</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <!-- CSRF Token and Profile ID -->
+                            <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" id="csrfToken" />
+                            <input type="hidden" th:unless="${_csrf != null}" name="_csrf" value="" id="csrfToken" />
+                            <input type="hidden" id="profileId" th:value="${profile.id}" />
+                            <h5 class="card-title">Profile Information</h5>
+                            <dl class="row">
+                                <dt class="col-sm-3">ID</dt>
+                                <dd class="col-sm-9" th:text="${profile.id}">-</dd>
+
+                                <th:block th:if="${profile.createdAt != null}">
+                                    <dt class="col-sm-3">Created</dt>
+                                    <dd class="col-sm-9" th:text="${#temporals.format(profile.createdAt, 'dd.MM.yyyy HH:mm')}">-</dd>
+                                </th:block>
+
+                                <th:block th:if="${profile.updatedAt != null}">
+                                    <dt class="col-sm-3">Last Updated</dt>
+                                    <dd class="col-sm-9" th:text="${#temporals.format(profile.updatedAt, 'dd.MM.yyyy HH:mm')}">-</dd>
+                                </th:block>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        <div class="card-footer text-end">
+            <a th:href="@{/profiles}" class="btn btn-outline-secondary me-2">
+                <i class="bi bi-arrow-left me-1"></i> Back to List
+            </a>
+            <a th:href="@{/profiles/{id}/edit(id=${profile.id})}" class="btn btn-primary">
+                <i class="bi bi-pencil-square me-1"></i> Edit Profile
+            </a>
+        </div>
+    </div>
+
     <!-- Подключаем необходимые скрипты -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // Function to update fault status via AJAX
-        function updateFaultStatus(checkbox) {
-            const profileId = checkbox.dataset.profileId;
-            const deviceId = checkbox.dataset.deviceId;
-            const faultId = checkbox.dataset.faultId;
-            const isChecked = checkbox.checked;
-            
-            // Store the current state in case we need to revert
-            const originalState = !isChecked;
-            
-            // Disable checkbox during request
-            checkbox.disabled = true;
-            
-            // Create URL with parameters
-            const url = new URL(`/profiles/${profileId}/update-fault-status`, window.location.origin);
-            
-            // Create form data
-            const formData = new FormData();
-            formData.append('deviceId', deviceId);
-            formData.append('faultId', faultId);
-            formData.append('covered', isChecked);
-            
-            // Make the request
-            fetch(url, {
-                method: 'POST',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Content-Type': 'application/x-www-form-urlencoded'
-                },
-                body: new URLSearchParams({
-                    deviceId: deviceId,
-                    faultId: faultId,
-                    covered: isChecked
-                })
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.json();
-            })
-            .then(data => {
-                // Re-enable the checkbox
-                checkbox.disabled = false;
-                
-                if (data.success) {
-                    // Update UI to reflect the change
-                    const label = checkbox.nextElementSibling;
-                    if (isChecked) {
-                        label.classList.add('text-success', 'fw-bold');
-                    } else {
-                        label.classList.remove('text-success', 'fw-bold');
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap-select@1.14.0-beta2/dist/js/bootstrap-select.min.js"></script>
+
+    <th:block layout:fragment="scripts">
+        <script th:inline="javascript">
+            //<![CDATA[
+            let isUpdatingDCCOMP = false;
+            let lastUpdateTime = 0;
+            const UPDATE_DEBOUNCE_TIME = 500;
+
+            // Global function to initialize coverage
+            window.initializeCoverage = function() {
+                try {
+                    console.log('Initializing coverage...');
+
+                    // Initialize all coverage inputs to 0
+                    $('.coverage-percent').each(function() {
+                        $(this).val('0');
+                    });
+
+                    // Initialize all method selects
+                    $('.diagnostic-method-select').each(function() {
+                        const $select = $(this);
+                        const selectedOption = $select.find('option:selected');
+
+                        if (selectedOption.val()) {
+                            const $coverageInput = $select.closest('.fault-item').find('.coverage-percent');
+                            const coverageMatch = selectedOption.text().match(/\((LOW|MEDIUM|HIGH)\)/);
+
+                            if (coverageMatch) {
+                                const coverageLevel = coverageMatch[1];
+                                let coverageValue = 0;
+
+                                switch(coverageLevel) {
+                                    case 'LOW': coverageValue = 60; break;
+                                    case 'MEDIUM': coverageValue = 90; break;
+                                    case 'HIGH': coverageValue = 99; break;
+                                }
+
+                                $coverageInput.val(coverageValue);
+                                $coverageInput.closest('.input-group').find('button').prop('disabled', false);
+                            }
+                        }
+                    });
+
+                    // Initial DCCOMP calculation
+                    if (window.updateDCCOMP) {
+                        window.updateDCCOMP(true);
                     }
-                    // Recalculate safety integrity after updating fault status
+
+                    console.log('Coverage initialization complete');
+                } catch (e) {
+                    console.error('Error initializing coverage:', e);
+                }
+            };
+
+            // Update DCCOMP function
+            window.updateDCCOMP = function(force = false) {
+                const now = Date.now();
+
+                if ((isUpdatingDCCOMP || (now - lastUpdateTime < UPDATE_DEBOUNCE_TIME)) && !force) {
+                    console.log('Skipping DCCOMP update: update in progress or too soon');
+                    return;
+                }
+
+                isUpdatingDCCOMP = true;
+                lastUpdateTime = now;
+
+                console.group('=== DCCOMP Update Start ===');
+                console.log('Force update:', force);
+
+                try {
+                    console.log('Updating DCCOMP values...');
+
+                    let updatesMade = false;
+
+                    const $deviceTable = $('#devicesTable');
+                    const $deviceRows = $deviceTable.find('> tbody > tr');
+
+                    $deviceRows.each(function(index) {
+                        const $deviceRow = $(this);
+                        const deviceName = $deviceRow.find('td:eq(1)').text().trim();
+                        console.group(`Device ${index + 1}: "${deviceName}"`);
+
+                        const $calcTable = $('table:has(.dc-comp-cell)');
+                        const $allCalcRows = $calcTable.find('tbody tr');
+
+                        let $calcRow = $allCalcRows.filter(function() {
+                            const $row = $(this);
+                            const rowText = $row.text().trim();
+
+                            const hasMatchingCell = $row.find('td').filter((i, td) =>
+                                $(td).text().trim() === deviceName
+                            ).length > 0;
+
+                            return hasMatchingCell;
+                        });
+
+                        if ($calcRow.length === 0) {
+                            $calcRow = $allCalcRows.filter((i, row) =>
+                                $(row).text().includes(deviceName)
+                            );
+                        }
+
+                        console.log('Matching calculation rows found:', $calcRow.length);
+                        if ($calcRow.length === 0) {
+                            console.warn('No calculation row found for device:', deviceName);
+                            console.groupEnd();
+                            return;
+                        }
+
+                        const $dcCompCell = $calcRow.find('.dc-comp-cell');
+
+                        const $methodSelects = $deviceRow.find('.diagnostic-method-select');
+                        console.log(`Found ${$methodSelects.length} method selects for device`);
+
+                        let totalCoverage = 0;
+                        let selectedMethodsCount = 0;
+
+                        $methodSelects.each(function(index) {
+                            const $select = $(this);
+                            const selectedOption = $select.find('option:selected');
+
+                            if (selectedOption.val()) {
+                                const $faultItem = $select.closest('.fault-item');
+                                const $coverageInput = $faultItem.find('.coverage-percent');
+                                const coverage = parseInt($coverageInput.val()) || 0;
+
+                                console.group(`Method ${index + 1}:`);
+                                console.log('Selected option:', selectedOption.text());
+                                console.log('Coverage input value:', $coverageInput.val());
+                                console.log('Parsed coverage:', coverage);
+
+                                if (coverage > 0) {
+                                    console.log('Adding to total coverage');
+                                    totalCoverage += coverage;
+                                    selectedMethodsCount++;
+                                } else {
+                                    console.log('Skipping - coverage is 0 or invalid');
+                                }
+
+                                console.groupEnd();
+                            } else {
+                                console.log(`Method ${index + 1}: No method selected`);
+                            }
+                        });
+
+                        console.log(`Total coverage: ${totalCoverage}, Selected methods: ${selectedMethodsCount}`);
+
+                        const averageCoverage = selectedMethodsCount > 0
+                            ? Math.round((totalCoverage / selectedMethodsCount) * 10) / 10
+                            : 0;
+
+                        const currentValue = parseFloat($dcCompCell.text()) || 0;
+                        const needsUpdate = Math.abs(currentValue - averageCoverage) > 0.1;
+
+                        console.log(`Current DCCOMP: ${currentValue}%, New value: ${averageCoverage}%`);
+                        console.log('Needs update:', needsUpdate);
+
+                        if (needsUpdate || force) {
+                            console.log(`Updating DCCOMP: ${currentValue}% -> ${averageCoverage}%`);
+                            $dcCompCell.text(averageCoverage);
+                            updatesMade = true;
+
+                            if (window.updateLambdaCalculations) {
+                                console.log('Updating lambda calculations...');
+                                updateLambdaCalculations($calcRow[0], undefined, undefined, undefined, true);
+                            }
+                        } else {
+                            console.log('No update needed - value unchanged or change too small');
+                        }
+
+                        console.groupEnd();
+                    });
+
+                    if (updatesMade) {
+                        console.log('DCCOMP update complete with changes');
+                    } else {
+                        console.log('DCCOMP update complete (no changes)');
+                    }
+
+                    // Добавляем вызов для пересчёта УПБ после обновления DC (если архитектура выбрана)
+                    if (window.calculateSafetyIntegrity) {
+                        calculateSafetyIntegrity();
+                    }
+
+                    console.groupEnd();
+                } catch (e) {
+                    console.error('Error in updateDCCOMP:', e);
+                } finally {
+                    setTimeout(() => {
+                        isUpdatingDCCOMP = false;
+                    }, 50);
+                }
+            };
+
+            window.updateCoverageDisplay = function(select) {
+                const $select = $(select);
+                const $coverageInput = $select.closest('.fault-item').find('.coverage-percent');
+                const selectedOption = $select.find('option:selected');
+
+                if (selectedOption.val()) {
+                    const coverageMatch = selectedOption.text().match(/\((LOW|MEDIUM|HIGH)\)/);
+                    if (coverageMatch) {
+                        const coverageLevel = coverageMatch[1];
+                        let coverageValue = 0;
+
+                        switch(coverageLevel) {
+                            case 'LOW': coverageValue = 60; break;
+                            case 'MEDIUM': coverageValue = 90; break;
+                            case 'HIGH': coverageValue = 99; break;
+                        }
+
+                        $coverageInput.val(coverageValue);
+                        $coverageInput.closest('.input-group').find('button').prop('disabled', false);
+                        return;
+                    }
+                }
+
+                $coverageInput.val('0');
+                $coverageInput.closest('.input-group').find('button').prop('disabled', true);
+            };
+
+            window.adjustSValue = function(button, direction) {
+                const $input = $(button).siblings('input.s-value');
+                let value = parseFloat($input.val()) || 0.5;
+                const step = 0.1;
+                value += direction * step;
+                value = Math.max(0, Math.min(1, value));
+                $input.val(value.toFixed(1));
+                updateSValue($input[0]);
+                return false;
+            };
+
+            window.adjustPercentage = function(button, change) {
+                const $input = $(button).closest('.input-group').find('input.coverage-percent');
+                let value = parseInt($input.val()) || 0;
+                value = Math.max(0, Math.min(100, value + change));
+                $input.val(value).trigger('change');
+                if (window.updateDCCOMP) window.updateDCCOMP();
+                return false;
+            };
+
+            function updateSValue(input) {
+                const row = input.closest('tr');
+                const sValue = parseFloat(input.value) || 0;
+
+                // Ensure value is between 0 and 1
+                const clampedValue = Math.min(1, Math.max(0, sValue));
+                if (clampedValue !== sValue) {
+                    input.value = clampedValue.toFixed(1);
+                }
+
+                // Calculate D value
+                const dValue = 1 - clampedValue;
+                const dInput = row.querySelector('.d-value');
+                dInput.value = dValue.toFixed(1);
+
+                // Update lambda calculations
+                updateLambdaCalculations(row, clampedValue, dValue);
+
+                // Добавляем вызов для пересчёта УПБ после обновления S
+                if (window.calculateSafetyIntegrity) {
+                    calculateSafetyIntegrity();
+                }
+            }
+
+            function updateLambdaValue(input) {
+                const row = input.closest('tr');
+                const lambda = parseFloat(input.value) || 0;
+
+                // Get current S and D values
+                const sValue = parseFloat(row.querySelector('.s-value').value) || 0;
+                const dValue = 1 - sValue;
+
+                // Update calculations
+                updateLambdaCalculations(row, sValue, dValue, lambda);
+
+                // Добавляем вызов для пересчёта УПБ после обновления λ
+                if (window.calculateSafetyIntegrity) {
+                    calculateSafetyIntegrity();
+                }
+            }
+
+            function updateLambdaCalculations(row, sValue, dValue, lambda, force = false) {
+                const $row = $(row);
+
+                // If values are not provided, get them from the row
+                if (sValue === undefined) {
+                    sValue = parseFloat($row.find('.s-value').val()) || 0;
+                }
+                if (dValue === undefined) {
+                    dValue = parseFloat($row.find('.d-value').val()) || 0;
+                }
+                if (lambda === undefined) {
+                    // Try to get lambda from input field first, then from text content
+                    const $lambdaInput = $row.find('.lambda-value');
+                    lambda = $lambdaInput.length ? parseFloat($lambdaInput.val()) : parseFloat($row.find('[data-field="lambda"]').text()) || 0;
+
+                    // Ensure we have a valid lambda value
+                    if (isNaN(lambda) || lambda <= 0) {
+                        lambda = 10; // Default value if invalid or missing
+                        if ($lambdaInput.length) {
+                            $lambdaInput.val(lambda);
+                        }
+                    }
+                }
+
+                // Calculate λS and λD with 4 decimal places for internal calculations
+                const lambdaS = sValue * lambda;
+                const lambdaD = dValue * lambda;
+
+                // Получаем DC_COMP для λDD
+                const dcComp = parseFloat($row.find('.dc-comp-cell').text()) / 100 || 0;  // Как доля (0-1)
+                const lambdaDD = dcComp * lambdaD;
+
+                // Полный расчёт SFF для этого устройства (per-device)
+                const totalLambda = lambdaS + lambdaD;  // = λ
+                const sff = totalLambda > 0 ? ((lambdaS + lambdaDD) / totalLambda) * 100 : 0;
+
+                // Обновляем ячейки с 2 знаками после запятой
+                $row.find('[data-formula="s*lambda"]').text(lambdaS.toFixed(2));
+                $row.find('[data-formula="d*lambda"]').text(lambdaD.toFixed(2));
+                $row.find('[data-formula="lambda_dd_du"]').text(lambdaD.toFixed(2));  // λDD + λDU = λD
+                $row.find('[data-formula="lambda_s_plus_lambda_dd"]').text((lambdaS + lambdaDD).toFixed(2));
+
+                // Сохраняем для агрегации в summary (округлённые до 1 знака, как в примере)
+                $row.attr('data-lambda-s', lambdaS.toFixed(1));
+                $row.attr('data-lambda-dd', lambdaDD.toFixed(1));
+                $row.attr('data-total-lambda', totalLambda.toFixed(1));
+                $row.attr('data-sff', sff.toFixed(1));  // Опционально, для per-device SFF
+
+                console.log(`Updated calculations for device ${$row.find('td:first').text().trim()}:`, {
+                    s: sValue,
+                    d: dValue,
+                    lambda: lambda,
+                    lambdaS: lambdaS.toFixed(4),
+                    lambdaD: lambdaD.toFixed(4),
+                    dcComp: (dcComp * 100).toFixed(0),
+                    lambdaDD: lambdaDD.toFixed(4),
+                    sff: sff.toFixed(2) + '%'
+                });
+            }
+
+            // Function to set colors for coverage indicators
+            function setCoverageColors() {
+                document.querySelectorAll('[data-coverage-level]').forEach(option => {
+                    const level = option.getAttribute('data-coverage-level');
+
+                    // Set background color based on coverage level
+                    const indicator = option.querySelector('.coverage-indicator') || option;
+                    if (indicator) {
+                        switch(level) {
+                            case 'LOW':
+                                indicator.style.backgroundColor = '#ffcccc';
+                                break;
+                            case 'MEDIUM':
+                                indicator.style.backgroundColor = '#fff3cd';
+                                break;
+                            case 'HIGH':
+                                indicator.style.backgroundColor = '#d4edda';
+                                break;
+                            default:
+                                indicator.style.backgroundColor = '#f8f9fa';
+                        }
+                    }
+                });
+            }
+
+            // Function to calculate safety integrity level (SIL)
+            function calculateSafetyIntegrity() {
+                const selectedArchitecture = $('#architectureType').val();
+                if (!selectedArchitecture) return null;
+
+                // Агрегируем суммы по всем устройствам для полного SFF (Σ)
+                let totalLambdaS = 0;
+                let totalLambdaDD = 0;
+                let totalLambdaD = 0;
+                let hasData = false;
+                $('table:has(.dc-comp-cell) tbody tr[data-device-id]').each(function() {
+                    const lambdaS = parseFloat($(this).attr('data-lambda-s') || '0');
+                    const lambdaDD = parseFloat($(this).attr('data-lambda-dd') || '0');
+                    const totalLambdaPerDevice = parseFloat($(this).attr('data-total-lambda') || '0');
+                    if (totalLambdaPerDevice > 0) {
+                        hasData = true;
+                        totalLambdaS += lambdaS;
+                        totalLambdaDD += lambdaDD;
+                        totalLambdaD += (totalLambdaPerDevice - lambdaS);  // λD = total - λS
+                    }
+                });
+
+                const totalDenominator = totalLambdaS + totalLambdaD;
+                const sff = totalDenominator > 0 ? ((totalLambdaS + totalLambdaDD) / totalDenominator) * 100 : 0;
+                const minCoveragePercent = hasData ? sff : 0;
+
+                // Determine SIL based on architecture and coverage
+                let sil = 'Н/Д';
+                const n = selectedArchitecture === 'ONE_OUT_OF_ONE' ? 0 :
+                    selectedArchitecture === 'ONE_OUT_OF_TWO' ? 1 : 2;
+
+                if (minCoveragePercent < 60) {
+                    sil = n >= 1 ? 'УПБ 1' : '-';
+                    if (n >= 2) sil = 'УПБ 2';
+                } else if (minCoveragePercent < 90) {
+                    sil = n === 0 ? 'УПБ 1' : n === 1 ? 'УПБ 2' : 'УПБ 3';
+                } else if (minCoveragePercent < 99) {
+                    sil = n === 0 ? 'УПБ 2' : n === 1 ? 'УПБ 3' : 'УПБ 4';
+                } else {
+                    sil = n === 0 ? 'УПБ 2' : 'УПБ 4';
+                }
+
+                // Update the table
+                updateSafetyTable(selectedArchitecture, minCoveragePercent);
+
+                // Информативный текст с реальными суммами (как в вашем примере)
+                const architectureText = selectedArchitecture === 'ONE_OUT_OF_ONE' ? '1oo1' :
+                    selectedArchitecture === 'ONE_OUT_OF_TWO' ? '1oo2' : '2oo3';
+                if (hasData) {
+                    const lambdaS = totalLambdaS.toFixed(1);
+                    const lambdaDD = totalLambdaDD.toFixed(1);
+                    const totalLambda = totalDenominator.toFixed(1);
+                    $('#upb-summary').html(
+                        `УПБ = <span style="font-size: smaller;">(Σ λ<sub>S</sub> + Σ λ<sub>DD</sub>) / (Σ λ<sub>S</sub> + Σ λ<sub>D</sub>) × 100%</span> ` +
+                        `= (${lambdaS} + ${lambdaDD}) / ${totalLambda} × 100% = ${sff.toFixed(1)}% ` +
+                        `(по архитектуре ${architectureText}, N=${n}) = ${sil}`
+                    );
+                } else {
+                    $('#upb-summary').text('УПБ = -- (формула не рассчитана)');
+                }
+
+                return {
+                    coveragePercent: minCoveragePercent,
+                    sil: sil
+                };
+            }
+
+            // Function to update the safety table
+            function updateSafetyTable(architecture, coveragePercent) {
+                const n = architecture === 'ONE_OUT_OF_ONE' ? 0 :
+                    architecture === 'ONE_OUT_OF_TWO' ? 1 : 2;
+
+                // Clear all previous highlights
+                $('.safety-table td').removeClass('table-primary fw-bold');
+
+                // Find the row that matches the current coverage range
+                let targetRow = null;
+                $('.safety-table tbody tr').each(function() {
+                    const $row = $(this);
+                    const rangeText = $row.find('td:first').text().trim();
+
+                    if ((rangeText.includes('менее 60%') && coveragePercent < 60) ||
+                        (rangeText.includes('от 60% до менее 90%') && coveragePercent >= 60 && coveragePercent < 90) ||
+                        (rangeText.includes('от 90% до менее 99%') && coveragePercent >= 90 && coveragePercent < 99) ||
+                        (rangeText.includes('более и равно 99%') && coveragePercent >= 99)) {
+                        targetRow = $row;
+                        return false;
+                    }
+                });
+
+                if (!targetRow) return;
+
+                // Find and highlight the specific cell
+                const cellIndex = n + 1;
+                const $cell = targetRow.find(`td:eq(${cellIndex})`);
+                $cell.addClass('table-primary fw-bold');
+            }
+
+            // Update method visibility
+            var updateMethodVisibility = function() {
+                if (typeof calculateSafetyIntegrity === 'function') {
+                    calculateSafetyIntegrity();
+                }
+            };
+
+            // Helper function to get profile ID from multiple possible locations
+            function getProfileIdFromUrl() {
+                // 1. Try to get from the hidden input
+                const $profileIdInput = $('#profileId');
+                if ($profileIdInput.length) {
+                    const id = $profileIdInput.val();
+                    if (id) {
+                        console.log('Got profile ID from hidden input:', id);
+                        return id;
+                    }
+                }
+
+                // 2. Try to get from URL path
+                const match = window.location.pathname.match(/\/profiles\/(\d+)/);
+                if (match && match[1]) {
+                    console.log('Got profile ID from URL:', match[1]);
+                    return match[1];
+                }
+
+                // 3. Try other possible input names
+                const $altProfileInput = $('input[name="profileId"]');
+                if ($altProfileInput.length) {
+                    const id = $altProfileInput.val();
+                    if (id) {
+                        console.log('Got profile ID from alternate input:', id);
+                        return id;
+                    }
+                }
+
+                // 4. As a last resort, try to find it in the page content
+                const $profileIdDisplay = $('dd:contains("ID:")').next('dd');
+                if ($profileIdDisplay.length) {
+                    const id = $profileIdDisplay.text().trim();
+                    if (id && !isNaN(id)) {
+                        console.log('Got profile ID from page content:', id);
+                        return id;
+                    }
+                }
+
+                console.error('Could not determine profile ID.');
+
+                return null;
+            }
+
+            // Simple table sorting
+            function sortTable(columnIndex, ascending) {
+                const $table = $('#devicesTable');
+                const $rows = $('tbody > tr', $table).get();
+
+                $rows.sort((a, b) => {
+                    const aValue = $('td', a).eq(columnIndex).text().trim().toLowerCase();
+                    const bValue = $('td', b).eq(columnIndex).text().trim().toLowerCase();
+                    return ascending
+                        ? aValue.localeCompare(bValue)
+                        : bValue.localeCompare(aValue);
+                });
+
+                $('tbody', $table).empty().append($rows);
+            }
+
+            // Initialize tooltips
+            var initTooltips = function() {
+                $('[data-bs-toggle="tooltip"]').tooltip({
+                    trigger: 'hover',
+                    html: true
+                });
+            };
+
+            // Initialize the page
+            var initPage = function() {
+                initTooltips();
+
+                // Set up event listeners
+                $(document).on('change', '.method-checkbox', function() {
                     if (typeof calculateSafetyIntegrity === 'function') {
                         calculateSafetyIntegrity();
                     }
-                } else {
-                    // Revert checkbox state if update failed
-                    checkbox.checked = originalState;
-                    alert('Ошибка при обновлении статуса неисправности: ' + (data.message || 'Неизвестная ошибка'));
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                // Revert checkbox state on error and re-enable it
-                checkbox.checked = originalState;
-                checkbox.disabled = false;
-                alert('Произошла ошибка при обновлении статуса неисправности');
-            });
-        }
-    </script>
-    <script>
-        // Function to set colors for coverage indicators
-        function setCoverageColors() {
-            document.querySelectorAll('[data-coverage-level]').forEach(option => {
-                const level = option.getAttribute('data-coverage-level');
-                
-                // Set background color based on coverage level
-                const indicator = option.querySelector('.coverage-indicator') || option;
-                if (indicator) {
-                    switch(level) {
-                        case 'LOW':
-                            indicator.style.backgroundColor = '#ffcccc';
-                            break;
-                        case 'MEDIUM':
-                            indicator.style.backgroundColor = '#fff3cd';
-                            break;
-                        case 'HIGH':
-                            indicator.style.backgroundColor = '#d4edda';
-                            break;
-                        default:
-                            indicator.style.backgroundColor = '#f8f9fa';
+                });
+
+                // Handle fault checkbox changes (if uncommented in future)
+                $(document).on('change', '.fault-checkbox', function() {
+                    // updateFaultStatus(this);
+                    if (typeof calculateSafetyIntegrity === 'function') {
+                        calculateSafetyIntegrity();
                     }
-                }
-            });
-        }
-        
-        // Set colors for coverage indicators on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            setCoverageColors();
-        });
+                });
 
-        // Function to calculate safety integrity level (SIL)
-        function calculateSafetyIntegrity() {
-            const selectedArchitecture = $('#architectureType').val();
-            if (!selectedArchitecture) return null;
-            
-            // Get all selected methods and their coverage
-            const selectedMethods = [];
-            $('.method-checkbox:checked').each(function() {
-                const $item = $(this).closest('.method-item');
-                selectedMethods.push({
-                    coverageLevel: $item.data('coverage-level'),
-                    coveragePercent: parseFloat($item.data('coverage-percent') || '0')
+                $('#architectureType').on('change', updateMethodVisibility);
+
+                // Update when S value changes
+                $(document).on('input change', '.s-value', function() {
+                    const $input = $(this);
+                    let value = parseFloat($input.val()) || 0;
+
+                    // Ensure value is between 0 and 1
+                    if (value < 0) {
+                        value = 0;
+                        $input.val('0');
+                    }
+                    if (value > 1) {
+                        value = 1;
+                        $input.val('1');
+                    } else {
+                        $input.val(value.toString());
+                    }
+
+                    // Update D value to maintain S + D = 1
+                    const $row = $input.closest('tr');
+                    const dValue = 1 - value;
+                    $row.find('.d-value').val(dValue.toFixed(1));
+
+                    console.log('S value changed:', {
+                        s: value,
+                        d: dValue,
+                        row: $row[0]
+                    });
+
+                    // Update calculations immediately
+                    updateSValue($input[0]);
                 });
-            });
-            
-            // Get all selected faults and their coverage
-            const selectedFaults = [];
-            $('.fault-checkbox:checked').each(function() {
-                const $item = $(this).closest('.method-item');
-                selectedFaults.push({
-                    coverageLevel: $item.data('coverage-level') || 'LOW',
-                    coveragePercent: parseFloat($item.data('coverage-percent') || '0')
+
+                // Handle lambda changes
+                $(document).on('input change', '.lambda-value', function() {
+                    updateLambdaValue(this);
                 });
-            });
-            
-            // Calculate minimum coverage percentage
-            let minCoveragePercent = 100;
-            [...selectedMethods, ...selectedFaults].forEach(item => {
-                if (item.coveragePercent > 0 && item.coveragePercent < minCoveragePercent) {
-                    minCoveragePercent = item.coveragePercent;
+
+                // Also update on blur to ensure final value is set
+                $(document).on('blur', '.lambda-value', function() {
+                    const $input = $(this);
+                    let value = parseFloat($input.val()) || 0;
+                    if (value < 0) {
+                        value = 0;
+                        $input.val(value);
+                    }
+                });
+
+                // Initialize UI components
+                $('.table-bordered').addClass('safety-table');
+
+                if ($.fn.selectpicker) {
+                    $('.selectpicker').selectpicker();
                 }
-            });
-            
-            // If no items selected, use 0% coverage
-            if (minCoveragePercent === 100 && (selectedMethods.length > 0 || selectedFaults.length > 0)) {
-                minCoveragePercent = 0;
-            }
-            
-            // Determine SIL based on architecture and coverage
-            let sil = 'Н/Д';
-            const n = selectedArchitecture === 'ONE_OUT_OF_ONE' ? 0 : 
-                      selectedArchitecture === 'ONE_OUT_OF_TWO' ? 1 : 2;
-            
-            if (minCoveragePercent < 60) {
-                sil = n >= 1 ? 'УПБ 1' : '-';
-                if (n >= 2) sil = 'УПБ 2';
-            } else if (minCoveragePercent < 90) {
-                sil = n === 0 ? 'УПБ 1' : n === 1 ? 'УПБ 2' : 'УПБ 3';
-            } else if (minCoveragePercent < 99) {
-                sil = n === 0 ? 'УПБ 2' : n === 1 ? 'УПБ 3' : 'УПБ 4';
-            } else {
-                sil = n === 0 ? 'УПБ 2' : 'УПБ 4';
-            }
-            
-            // Update the table
-            updateSafetyTable(selectedArchitecture, minCoveragePercent);
-            
-            return {
-                coveragePercent: minCoveragePercent,
-                sil: sil
+
+                // Initial update
+                updateMethodVisibility();
             };
-        }
 
-        // Function to update the safety table
-        function updateSafetyTable(architecture, coveragePercent) {
-            const n = architecture === 'ONE_OUT_OF_ONE' ? 0 : 
-                      architecture === 'ONE_OUT_OF_TWO' ? 1 : 2;
-            
-            // Clear all previous highlights
-            $('.safety-table td').removeClass('table-primary fw-bold');
-            
-            // Find the row that matches the current coverage range
-            let targetRow = null;
-            $('.safety-table tbody tr').each(function() {
-                const $row = $(this);
-                const rangeText = $row.find('td:first').text().trim();
-                
-                if ((rangeText.includes('менее 60%') && coveragePercent < 60) ||
-                    (rangeText.includes('от 60% до менее 90%') && coveragePercent >= 60 && coveragePercent < 90) ||
-                    (rangeText.includes('от 90% до менее 99%') && coveragePercent >= 90 && coveragePercent < 99) ||
-                    (rangeText.includes('более и равно 99%') && coveragePercent >= 99)) {
-                    targetRow = $row;
-                    return false; // Exit the loop once we find the matching row
+            // Handle diagnostic method selection
+            $(document).on('change', '.diagnostic-method-select', function() {
+                const $select = $(this);
+
+                // Get the profile ID
+                const profileId = getProfileIdFromUrl();
+                if (!profileId) {
+                    console.error('Cannot update method: No profile ID found');
+                    return;
+                }
+
+                // Get other required IDs
+                const methodId = $select.val();
+                const faultId = $select.data('fault-id');
+                const deviceId = $select.data('device-id');
+
+                if (!methodId || !faultId || !deviceId) {
+                    console.error('Missing required IDs:', {methodId, faultId, deviceId});
+                    return;
+                }
+
+                console.log('Updating method:', {profileId, deviceId, faultId, methodId});
+
+                // Show loading state
+                $select.prop('disabled', true);
+
+                // Update coverage display immediately for better UX
+                updateCoverageDisplay($select[0]);
+
+                // Update DCCOMP calculation
+                const $row = $select.closest('tr').closest('table').closest('tr');
+                if ($row.length) {
+                    updateLambdaCalculations($row[0]);
+                }
+
+                // Make the API call
+                $.ajax({
+                    url: `/api/profiles/${profileId}/devices/${deviceId}/faults/${faultId}/method`,
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ methodId: methodId }),
+                    success: function(response) {
+                        console.log('Method updated successfully:', response);
+
+                        // Update the UI
+                        if (window.updateCoverageDisplay) {
+                            window.updateCoverageDisplay($select[0]);
+                        }
+
+                        // Force update DCCOMP
+                        if (window.updateDCCOMP) {
+                            window.updateDCCOMP(true);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error updating method:', {status, error, response: xhr.responseText});
+
+                        // Revert the select to its previous value
+                        const previousValue = $select.data('previous-value');
+                        if (previousValue !== undefined) {
+                            $select.val(previousValue);
+                        }
+
+                        // Show error message
+                        // alert('Ошибка при обновлении метода диагностики. Пожалуйста, попробуйте снова.');
+                    },
+                    complete: function() {
+                        $select.prop('disabled', false);
+                    }
+                });
+            });
+
+            // Update coverage display when method changes
+            $(document).on('change', '.diagnostic-method-select', function() {
+                if (window.updateCoverageDisplay) {
+                    window.updateCoverageDisplay(this);
+                }
+                if (window.updateDCCOMP) {
+                    window.updateDCCOMP();
                 }
             });
-            
-            if (!targetRow) return; // No matching row found
-            
-            // Find and highlight the specific cell
-            const cellIndex = n + 1; // +1 because first column is the range
-            const $cell = targetRow.find(`td:eq(${cellIndex})`);
-            $cell.addClass('table-primary fw-bold');
-        }
+
+            // Update DCCOMP when percentage changes
+            $(document).on('change', '.coverage-percent', function() {
+                if (window.updateDCCOMP) {
+                    window.updateDCCOMP();
+                }
+            });
+
+            $(document).on('click', '.btn-outline-secondary', function() {
+                // Small delay to ensure the value is updated
+                setTimeout(() => window.updateDCCOMP(), 10);
+            });
+
+            // Prevent manual input in percentage field
+            $(document).on('keydown', '.coverage-percent', function(e) {
+                e.preventDefault();
+                return false;
+            });
+
+            // Initialize sorting
+            $('th.sortable').on('click', function() {
+                const $this = $(this);
+                const columnIndex = $this.index();
+                const isAsc = !$this.hasClass('sort-asc');
+
+                // Update sort indicators
+                $('th.sortable').removeClass('sort-asc sort-desc');
+                $this.addClass(isAsc ? 'sort-asc' : 'sort-desc');
+
+                // Sort the table
+                sortTable(columnIndex, isAsc);
+            });
+
+            // Initialize when document is ready
+            $(function() {
+                // Initialize coverage displays and DCCOMP
+                if (window.initializeCoverage) {
+                    window.initializeCoverage();
+                }
+
+                // Initial initialization
+                initializeCoverage();
+
+                // Re-initialize after any dynamic content loads
+                $(document).ajaxComplete(function() {
+                    initializeCoverage();
+                });
+
+                // Initialize the rest of the page
+                initPage();
+                if (window.calculateSafetyIntegrity) {
+                    calculateSafetyIntegrity();  // Инициальный расчёт УПБ на загрузке
+                }
+            });
+
+            // Document ready for other events
+            document.addEventListener('DOMContentLoaded', function() {
+                // Handle S value changes
+                document.addEventListener('input', function(e) {
+                    if (e.target.classList.contains('s-value')) {
+                        updateSValue(e.target);
+                    } else if (e.target.classList.contains('lambda-value')) {
+                        updateLambdaValue(e.target);
+                    }
+                });
+
+                // Initial calculation for all rows
+                document.querySelectorAll('.s-value').forEach(input => {
+                    updateSValue(input);
+                });
+
+                // Set colors for coverage indicators
+                setCoverageColors();
+                // Initial DCCOMP calculation
+                window.updateDCCOMP();
+            });
+
+            // Initialize calculations for all rows on page load
+            $(document).ready(function() {
+                $('table:has(.dc-comp-cell) tbody tr[data-device-id]').each(function() {
+                    const $row = $(this);
+                    // Set default lambda value if empty
+                    const $lambdaInput = $row.find('.lambda-value');
+                    if (!$lambdaInput.val()) {
+                        $lambdaInput.val('10');
+                    }
+                    // Trigger initial calculation
+                    updateLambdaCalculations(this);
+                });
+            });
+            //]]>
         </script>
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap-select@1.14.0-beta2/dist/js/bootstrap-select.min.js"></script>
-
-        <th:block layout:fragment="scripts">
-            <script th:inline="javascript">
-    //<![CDATA[
-    document.addEventListener('DOMContentLoaded', function() {
-        // Initialize tooltips
-        var initTooltips = function() {
-            $('[data-bs-toggle="tooltip"]').tooltip({
-                trigger: 'hover',
-                html: true
-            });
-        };
-        
-        // Update method visibility
-        var updateMethodVisibility = function() {
-            var selectedArch = $('#architectureType').val();
-            console.log('Updating visibility for architecture:', selectedArch);
-            
-            $('.method-item, .fault-item').each(function() {
-                var $item = $(this);
-                var level = ($item.data('coverage-level') || 'LOW').toUpperCase();
-                var showItem = false;
-                
-                console.log('Item level:', level, 'for element:', $item);
-                
-                if (selectedArch === 'ONE_OUT_OF_ONE') {
-                    showItem = (level === 'LOW');
-                } else if (selectedArch === 'ONE_OUT_OF_TWO') {
-                    showItem = (level === 'LOW' || level === 'MEDIUM' || level === 'MED' || level === 'MID');
-                } else if (selectedArch === 'TWO_OUT_OF_THREE') {
-                    showItem = true; // Show all methods for 2oo3
-                }
-                
-                console.log('Showing item:', showItem, 'for level:', level, 'in architecture:', selectedArch);
-                $item.toggle(showItem);
-            });
-            
-            if (typeof calculateSafetyIntegrity === 'function') {
-                calculateSafetyIntegrity();
-            }
-        };
-        
-        // Initialize the page
-        var initPage = function() {
-            initTooltips();
-            
-            // Set up event listeners
-            $(document).on('change', '.method-checkbox', function() {
-                if (typeof calculateSafetyIntegrity === 'function') {
-                    calculateSafetyIntegrity();
-                }
-            });
-
-            // Handle fault checkbox changes
-            $(document).on('change', '.fault-checkbox', function() {
-                updateFaultStatus(this);
-                if (typeof calculateSafetyIntegrity === 'function') {
-                    calculateSafetyIntegrity();
-                }
-            });
-            
-            $('#architectureType').on('change', updateMethodVisibility);
-            
-            // Initialize UI components
-            $('.table-bordered').addClass('safety-table');
-            
-            if ($.fn.selectpicker) {
-                $('.selectpicker').selectpicker();
-            }
-            
-            // Initial update
-            updateMethodVisibility();
-        };
-        
-        // Start initialization
-        initPage();
-    });
-    //]]>
-    </script>
     </th:block>
+</div>
 </body>
 </html>
