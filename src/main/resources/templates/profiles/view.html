@@ -725,6 +725,8 @@
                 const $coverageInput = $select.closest('.fault-item').find('.coverage-percent');
                 const selectedOption = $select.find('option:selected');
 
+                console.log('Updating coverage display for method:', selectedOption.text());
+
                 if (selectedOption.val()) {
                     const coverageMatch = selectedOption.text().match(/\((LOW|MEDIUM|HIGH)\)/);
                     if (coverageMatch) {
@@ -737,12 +739,14 @@
                             case 'HIGH': coverageValue = 99; break;
                         }
 
+                        console.log(`Setting coverage to ${coverageValue}% for level ${coverageLevel}`);
                         $coverageInput.val(coverageValue);
                         $coverageInput.closest('.input-group').find('button').prop('disabled', false);
                         return;
                     }
                 }
 
+                console.log('No method selected, resetting coverage to 0');
                 $coverageInput.val('0');
                 $coverageInput.closest('.input-group').find('button').prop('disabled', true);
             };
@@ -946,7 +950,7 @@
                     const lambdaDD = totalLambdaDD.toFixed(1);
                     const totalLambda = totalDenominator.toFixed(1);
                     $('#upb-summary').html(
-                        `УПБ = <span style="font-size: smaller;">(Σ λ<sub>S</sub> + Σ λ<sub>DD</sub>) / (Σ λ<sub>S</sub> + Σ λ<sub>D</sub>) × 100%</span> ` +
+                        `ДБО = <span style="font-size: smaller;">(Σ λ<sub>S</sub> + Σ λ<sub>DD</sub>) / (Σ λ<sub>S</sub> + Σ λ<sub>DD</sub> + Σ λ<sub>DU</sub>) × 100%</span> ` +
                         `= (${lambdaS} + ${lambdaDD}) / ${totalLambda} × 100% = ${sff.toFixed(1)}% ` +
                         `(по архитектуре ${architectureText}, N=${n}) = ${sil}`
                     );
