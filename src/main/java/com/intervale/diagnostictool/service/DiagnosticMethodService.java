@@ -45,7 +45,7 @@ public class DiagnosticMethodService {
      * Find all diagnostic methods suitable for a specific device and architecture.
      *
      * @param device the device
-     * @param architecture the architecture type (1oo1, 1oo2, 2oo3)
+     * @param architecture the architecture type (1oo1, 1oo2, 3oo3)
      * @return list of suitable diagnostic methods
      */
     @Transactional(readOnly = true)

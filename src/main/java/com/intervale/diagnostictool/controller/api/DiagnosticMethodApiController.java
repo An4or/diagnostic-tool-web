@@ -28,7 +28,7 @@ public class DiagnosticMethodApiController {
      * Get all diagnostic methods available for a specific device and architecture.
      *
      * @param deviceId the ID of the device
-     * @param architecture the architecture type (1oo1, 1oo2, 2oo3)
+     * @param architecture the architecture type (1oo1, 1oo2, 3oo3)
      * @return list of available diagnostic methods
      */
     @GetMapping("/device/{deviceId}")

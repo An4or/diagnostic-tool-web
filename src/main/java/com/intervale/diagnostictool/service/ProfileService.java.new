@@ -343,7 +343,7 @@ public class ProfileService {
                       (1.0 / 3.0);
                 break;
                 
-            case TWO_OUT_OF_THREE: // 2oo3
+            case TWO_OUT_OF_THREE: // 3oo3
                 pfd = 3 * Math.pow((lambda * (1 - diagnosticCoverage)), 2);
                 break;
                 
