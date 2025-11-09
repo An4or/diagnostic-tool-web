@@ -534,50 +534,118 @@
             let lastUpdateTime = 0;
             const UPDATE_DEBOUNCE_TIME = 500;
 
+            // Flags to prevent infinite loops
+            let isUpdatingCoverage = false;
+            let isLoadingCoverage = false;
+
+            // Cache for coverage data to prevent repeated requests
+            const coverageCache = new Map();
+
+            // Function to get cache key
+            function getCoverageCacheKey(profileId, deviceId, faultId, methodId) {
+                return `${profileId}_${deviceId}_${faultId}_${methodId}`;
+            }
+
             // Global function to initialize coverage
             window.initializeCoverage = function() {
                 try {
                     console.log('Initializing coverage...');
 
-                    // Initialize all coverage inputs to 0
-                    $('.coverage-percent').each(function() {
-                        $(this).val('0');
-                    });
+                    // Initialize all coverage inputs
+                    const profileId = getProfileIdFromUrl();
 
-                    // Initialize all method selects
-                    $('.diagnostic-method-select').each(function() {
-                        const $select = $(this);
-                        const selectedOption = $select.find('option:selected');
+                    // Load all saved coverage percentages from backend
+                    if (profileId) {
+                        $.ajax({
+                            url: `/api/profiles/${profileId}/faults/coverage-percentages`,
+                            method: 'GET',
+                            success: function(response) {
+                                console.log('Loaded all coverage percentages:', response);
 
-                        if (selectedOption.val()) {
-                            const $coverageInput = $select.closest('.fault-item').find('.coverage-percent');
-                            const coverageMatch = selectedOption.text().match(/\((LOW|MEDIUM|HIGH)\)/);
-
-                            if (coverageMatch) {
-                                const coverageLevel = coverageMatch[1];
-                                let coverageValue = 0;
-
-                                switch(coverageLevel) {
-                                    case 'LOW': coverageValue = 60; break;
-                                    case 'MEDIUM': coverageValue = 90; break;
-                                    case 'HIGH': coverageValue = 99; break;
+                                // Populate cache with all saved percentages
+                                for (const [key, value] of Object.entries(response)) {
+                                    if (value !== null && value !== undefined) {
+                                        coverageCache.set(key, value);
+                                        console.log(`Cached coverage: ${key} = ${value}`);
+                                    }
                                 }
 
-                                $coverageInput.val(coverageValue);
-                                $coverageInput.closest('.input-group').find('button').prop('disabled', false);
+                                // Now initialize all coverage inputs with cached values
+                                initializeCoverageInputs();
+                            },
+                            error: function(xhr, status, error) {
+                                console.error('Error loading coverage percentages:', {status, error, response: xhr.responseText});
+                                // Continue with initialization even if loading fails
+                                initializeCoverageInputs();
                             }
-                        }
-                    });
-
-                    // Initial DCCOMP calculation
-                    if (window.updateDCCOMP) {
-                        window.updateDCCOMP(true);
+                        });
+                    } else {
+                        initializeCoverageInputs();
                     }
-
-                    console.log('Coverage initialization complete');
                 } catch (e) {
                     console.error('Error initializing coverage:', e);
                 }
+            };
+
+            // Function to initialize coverage inputs
+            function initializeCoverageInputs() {
+                const profileId = getProfileIdFromUrl();
+
+                $('.diagnostic-method-select').each(function() {
+                    const $select = $(this);
+                    const selectedOption = $select.find('option:selected');
+                    const $coverageInput = $select.closest('.fault-item').find('.coverage-percent');
+                    const faultId = $select.data('fault-id');
+                    const deviceId = $select.data('device-id');
+                    const methodId = selectedOption.val();
+
+                    if (selectedOption.val()) {
+                        const coverageMatch = selectedOption.text().match(/\((LOW|MEDIUM|HIGH)\)/);
+                        let defaultCoverageValue = 0;
+
+                        if (coverageMatch) {
+                            const coverageLevel = coverageMatch[1];
+                            switch(coverageLevel) {
+                                case 'LOW': defaultCoverageValue = 60; break;
+                                case 'MEDIUM': defaultCoverageValue = 90; break;
+                                case 'HIGH': defaultCoverageValue = 99; break;
+                            }
+                        }
+
+                        // Try to load saved coverage from cache (loaded from backend on page load)
+                        if (profileId && faultId && deviceId && methodId) {
+                            const cacheKey = getCoverageCacheKey(profileId, deviceId, faultId, methodId);
+
+                            console.log('Initializing coverage for:', {profileId, deviceId, faultId, methodId, cacheKey});
+
+                            // Check cache first (should be populated from backend on page load)
+                            if (coverageCache.has(cacheKey)) {
+                                const cachedCoverage = coverageCache.get(cacheKey);
+                                isUpdatingCoverage = true;
+                                $coverageInput.val(cachedCoverage !== null && cachedCoverage !== undefined ? cachedCoverage : defaultCoverageValue);
+                                isUpdatingCoverage = false;
+                                $coverageInput.closest('.input-group').find('button').prop('disabled', false);
+                                console.log('Using cached coverage on init:', cachedCoverage);
+                            } else {
+                                // If not in cache, use default value (cache should have been loaded on page load)
+                                isUpdatingCoverage = true;
+                                $coverageInput.val(defaultCoverageValue);
+                                isUpdatingCoverage = false;
+                                $coverageInput.closest('.input-group').find('button').prop('disabled', false);
+                                console.log('No cached coverage found, using default:', defaultCoverageValue);
+                            }
+                        }
+                    } else {
+                        $coverageInput.val('0');
+                    }
+                });
+
+                // Initial DCCOMP calculation
+                if (window.updateDCCOMP) {
+                    window.updateDCCOMP(true);
+                }
+
+                console.log('Coverage inputs initialization complete');
             };
 
             // Update DCCOMP function
@@ -720,34 +788,131 @@
                 }
             };
 
-            window.updateCoverageDisplay = function(select) {
+            window.updateCoverageDisplay = function(select, skipLoad) {
+                // Prevent infinite loops
+                if (isUpdatingCoverage || isLoadingCoverage) {
+                    console.log('Skipping updateCoverageDisplay - already updating');
+                    return;
+                }
+
                 const $select = $(select);
                 const $coverageInput = $select.closest('.fault-item').find('.coverage-percent');
                 const selectedOption = $select.find('option:selected');
+                const faultId = $select.data('fault-id');
+                const deviceId = $select.data('device-id');
+                const methodId = selectedOption.val();
+                const profileId = getProfileIdFromUrl();
 
-                console.log('Updating coverage display for method:', selectedOption.text());
+                console.log('Updating coverage display for method:', selectedOption.text(), 'skipLoad:', skipLoad);
 
                 if (selectedOption.val()) {
                     const coverageMatch = selectedOption.text().match(/\((LOW|MEDIUM|HIGH)\)/);
+                    let defaultCoverageValue = 0;
+
                     if (coverageMatch) {
                         const coverageLevel = coverageMatch[1];
-                        let coverageValue = 0;
-
                         switch(coverageLevel) {
-                            case 'LOW': coverageValue = 60; break;
-                            case 'MEDIUM': coverageValue = 90; break;
-                            case 'HIGH': coverageValue = 99; break;
+                            case 'LOW': defaultCoverageValue = 60; break;
+                            case 'MEDIUM': defaultCoverageValue = 90; break;
+                            case 'HIGH': defaultCoverageValue = 99; break;
+                        }
+                    }
+
+                    // Try to load saved coverage from backend (only if not skipped)
+                    if (!skipLoad && profileId && faultId && deviceId && methodId) {
+                        const cacheKey = getCoverageCacheKey(profileId, deviceId, faultId, methodId);
+
+                        console.log('Loading coverage for:', {profileId, deviceId, faultId, methodId, cacheKey});
+
+                        // Check cache first
+                        if (coverageCache.has(cacheKey)) {
+                            const cachedCoverage = coverageCache.get(cacheKey);
+                            isUpdatingCoverage = true;
+                            $coverageInput.val(cachedCoverage !== null ? cachedCoverage : defaultCoverageValue);
+                            isUpdatingCoverage = false;
+                            $coverageInput.closest('.input-group').find('button').prop('disabled', false);
+                            console.log('Using cached coverage:', cachedCoverage);
+                            return;
                         }
 
-                        console.log(`Setting coverage to ${coverageValue}% for level ${coverageLevel}`);
-                        $coverageInput.val(coverageValue);
+                        // Only make request if not already loading
+                        if (isLoadingCoverage) {
+                            console.log('Already loading coverage, skipping request');
+                            isUpdatingCoverage = true;
+                            $coverageInput.val(defaultCoverageValue);
+                            isUpdatingCoverage = false;
+                            $coverageInput.closest('.input-group').find('button').prop('disabled', false);
+                            return;
+                        }
+
+                        isLoadingCoverage = true;
+                        const url = `/api/profiles/${profileId}/faults/devices/${deviceId}/faults/${faultId}/method/${methodId}/coverage`;
+                        console.log('Making GET request to:', url);
+                        $.ajax({
+                            url: url,
+                            method: 'GET',
+                            success: function(response) {
+                                isLoadingCoverage = false;
+                                const coverage = response.coveragePercent !== null && response.coveragePercent !== undefined
+                                    ? response.coveragePercent
+                                    : null;
+
+                                // Only cache null if we don't have a value in cache already
+                                // This prevents overwriting a valid cached value with null
+                                if (coverage !== null || !coverageCache.has(cacheKey)) {
+                                    coverageCache.set(cacheKey, coverage);
+                                }
+
+                                if (coverage !== null) {
+                                    // Set value without triggering change event
+                                    isUpdatingCoverage = true;
+                                    $coverageInput.val(coverage);
+                                    isUpdatingCoverage = false;
+                                    console.log('Loaded saved coverage from backend:', coverage);
+                                } else {
+                                    // Check if we have a cached value (from previous save)
+                                    const cachedValue = coverageCache.get(cacheKey);
+                                    if (cachedValue !== null && cachedValue !== undefined) {
+                                        isUpdatingCoverage = true;
+                                        $coverageInput.val(cachedValue);
+                                        isUpdatingCoverage = false;
+                                        console.log('Using cached coverage (backend returned null):', cachedValue);
+                                    } else {
+                                        isUpdatingCoverage = true;
+                                        $coverageInput.val(defaultCoverageValue);
+                                        isUpdatingCoverage = false;
+                                        console.log(`Using default coverage: ${defaultCoverageValue}%`);
+                                    }
+                                }
+                                $coverageInput.closest('.input-group').find('button').prop('disabled', false);
+                            },
+                            error: function(xhr, status, error) {
+                                isLoadingCoverage = false;
+                                // Cache null result to prevent repeated requests
+                                coverageCache.set(cacheKey, null);
+
+                                // If no saved coverage, use default
+                                isUpdatingCoverage = true;
+                                $coverageInput.val(defaultCoverageValue);
+                                isUpdatingCoverage = false;
+                                $coverageInput.closest('.input-group').find('button').prop('disabled', false);
+                                console.log(`No saved coverage found, using default: ${defaultCoverageValue}%`);
+                            }
+                        });
+                    } else {
+                        // Fallback to default if we can't load or skipLoad is true
+                        isUpdatingCoverage = true;
+                        $coverageInput.val(defaultCoverageValue);
+                        isUpdatingCoverage = false;
                         $coverageInput.closest('.input-group').find('button').prop('disabled', false);
-                        return;
                     }
+                    return;
                 }
 
                 console.log('No method selected, resetting coverage to 0');
+                isUpdatingCoverage = true;
                 $coverageInput.val('0');
+                isUpdatingCoverage = false;
                 $coverageInput.closest('.input-group').find('button').prop('disabled', true);
             };
 
@@ -1184,18 +1349,49 @@
                     updateLambdaCalculations($row[0]);
                 }
 
+                // Get current coverage percentage
+                const $coverageInput = $select.closest('.fault-item').find('.coverage-percent');
+                let coveragePercent = parseInt($coverageInput.val()) || 0;
+
+                // If coverage is 0, try to get default value from method level
+                const selectedOption = $select.find('option:selected');
+                if (coveragePercent === 0 && selectedOption.length) {
+                    const coverageMatch = selectedOption.text().match(/\((LOW|MEDIUM|HIGH)\)/);
+                    if (coverageMatch) {
+                        const coverageLevel = coverageMatch[1];
+                        switch(coverageLevel) {
+                            case 'LOW': coveragePercent = 60; break;
+                            case 'MEDIUM': coveragePercent = 90; break;
+                            case 'HIGH': coveragePercent = 99; break;
+                        }
+                        // Update the input field
+                        isUpdatingCoverage = true;
+                        $coverageInput.val(coveragePercent);
+                        isUpdatingCoverage = false;
+                    }
+                }
+
+                console.log('Saving method with coverage:', {methodId, coveragePercent, faultId, deviceId});
+
                 // Make the API call
                 $.ajax({
-                    url: `/api/profiles/${profileId}/devices/${deviceId}/faults/${faultId}/method`,
+                    url: `/api/profiles/${profileId}/faults/devices/${deviceId}/faults/${faultId}/method`,
                     method: 'POST',
                     contentType: 'application/json',
-                    data: JSON.stringify({ methodId: methodId }),
+                    data: JSON.stringify({
+                        methodId: methodId,
+                        coveragePercent: coveragePercent
+                    }),
                     success: function(response) {
                         console.log('Method updated successfully:', response);
 
-                        // Update the UI
+                        // Update cache with the saved value
+                        const cacheKey = getCoverageCacheKey(profileId, deviceId, faultId, methodId);
+                        coverageCache.set(cacheKey, coveragePercent);
+
+                        // Update the UI (skip loading from backend as we just saved)
                         if (window.updateCoverageDisplay) {
-                            window.updateCoverageDisplay($select[0]);
+                            window.updateCoverageDisplay($select[0], true);
                         }
 
                         // Force update DCCOMP
@@ -1221,18 +1417,67 @@
                 });
             });
 
-            // Update coverage display when method changes
-            $(document).on('change', '.diagnostic-method-select', function() {
-                if (window.updateCoverageDisplay) {
-                    window.updateCoverageDisplay(this);
-                }
-                if (window.updateDCCOMP) {
-                    window.updateDCCOMP();
-                }
-            });
+            // Note: updateCoverageDisplay is already called in the main change handler above
+            // This handler is kept for backward compatibility but should not duplicate calls
 
-            // Update DCCOMP when percentage changes
+            // Update DCCOMP when percentage changes and save to backend
             $(document).on('change', '.coverage-percent', function() {
+                // Skip if we're programmatically updating the value
+                if (isUpdatingCoverage || isLoadingCoverage) {
+                    console.log('Skipping coverage save - programmatic update');
+                    if (window.updateDCCOMP) {
+                        window.updateDCCOMP();
+                    }
+                    return;
+                }
+
+                const $input = $(this);
+                const coveragePercent = parseInt($input.val()) || 0;
+                const faultId = $input.data('fault-id');
+                const deviceId = $input.data('device-id');
+
+                // Get the selected method ID
+                const $select = $input.closest('.fault-item').find('.diagnostic-method-select');
+                const methodId = $select.val();
+
+                if (!methodId || !faultId || !deviceId) {
+                    console.warn('Missing required IDs for saving coverage:', {methodId, faultId, deviceId});
+                    if (window.updateDCCOMP) {
+                        window.updateDCCOMP();
+                    }
+                    return;
+                }
+
+                const profileId = getProfileIdFromUrl();
+                if (!profileId) {
+                    console.error('Cannot save coverage: No profile ID found');
+                    if (window.updateDCCOMP) {
+                        window.updateDCCOMP();
+                    }
+                    return;
+                }
+
+                // Save coverage percentage to backend
+                $.ajax({
+                    url: `/api/profiles/${profileId}/faults/devices/${deviceId}/faults/${faultId}/method`,
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        methodId: methodId,
+                        coveragePercent: coveragePercent
+                    }),
+                    success: function(response) {
+                        console.log('Coverage percentage saved successfully:', response);
+
+                        // Update cache
+                        const cacheKey = getCoverageCacheKey(profileId, deviceId, faultId, methodId);
+                        coverageCache.set(cacheKey, coveragePercent);
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error saving coverage percentage:', {status, error, response: xhr.responseText});
+                    }
+                });
+
                 if (window.updateDCCOMP) {
                     window.updateDCCOMP();
                 }
@@ -1265,18 +1510,10 @@
 
             // Initialize when document is ready
             $(function() {
-                // Initialize coverage displays and DCCOMP
+                // Initialize coverage displays and DCCOMP (only once!)
                 if (window.initializeCoverage) {
                     window.initializeCoverage();
                 }
-
-                // Initial initialization
-                initializeCoverage();
-
-                // Re-initialize after any dynamic content loads
-                $(document).ajaxComplete(function() {
-                    initializeCoverage();
-                });
 
                 // Initialize the rest of the page
                 initPage();

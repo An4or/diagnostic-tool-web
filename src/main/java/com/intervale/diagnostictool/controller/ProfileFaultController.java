@@ -1,6 +1,7 @@
 package com.intervale.diagnostictool.controller;
 
 import com.intervale.diagnostictool.dto.ProfileFaultDto;
+import com.intervale.diagnostictool.dto.request.FaultMethodCoverageRequest;
 import com.intervale.diagnostictool.dto.request.ProfileFaultRequest;
 import com.intervale.diagnostictool.model.ProfileFaultId;
 import com.intervale.diagnostictool.service.ProfileFaultService;
@@ -32,7 +33,7 @@ public class ProfileFaultController {
     @GetMapping("/{faultTypeId}")
     @Operation(summary = "Get a specific profile fault by profile ID and fault type ID")
     public ResponseEntity<ProfileFaultDto> getProfileFaultById(
-            @PathVariable Long profileId, 
+            @PathVariable Long profileId,
             @PathVariable Long faultTypeId) {
         ProfileFaultId id = new ProfileFaultId(profileId, faultTypeId);
         return ResponseEntity.ok(profileFaultService.findById(id));
@@ -86,5 +87,41 @@ public class ProfileFaultController {
     @Operation(summary = "Get coverage statistics for a profile")
     public ResponseEntity<Map<String, Object>> getCoverageStats(@PathVariable Long profileId) {
         return ResponseEntity.ok(profileFaultService.getCoverageStats(profileId));
+    }
+
+    @PostMapping("/devices/{deviceId}/faults/{faultId}/method")
+    @Operation(summary = "Update diagnostic method and coverage percentage for a fault")
+    public ResponseEntity<Map<String, Object>> updateFaultMethod(
+            @PathVariable Long profileId,
+            @PathVariable Long deviceId,
+            @PathVariable Long faultId,
+            @Valid @RequestBody FaultMethodCoverageRequest request) {
+        profileFaultService.updateFaultMethodCoverage(
+                profileId, deviceId, faultId, request.getMethodId(), request.getCoveragePercent());
+
+        Map<String, Object> response = new java.util.HashMap<>();
+        response.put("success", true);
+        response.put("message", "Method and coverage updated successfully");
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/devices/{deviceId}/faults/{faultId}/method/{methodId}/coverage")
+    @Operation(summary = "Get coverage percentage for a specific fault method")
+    public ResponseEntity<Map<String, Object>> getFaultMethodCoverage(
+            @PathVariable Long profileId,
+            @PathVariable Long deviceId,
+            @PathVariable Long faultId,
+            @PathVariable Long methodId) {
+        Integer coverage = profileFaultService.getFaultMethodCoverage(profileId, deviceId, faultId, methodId);
+
+        Map<String, Object> response = new java.util.HashMap<>();
+        response.put("coveragePercent", coverage);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/coverage-percentages")
+    @Operation(summary = "Get all saved coverage percentages for a profile")
+    public ResponseEntity<Map<String, Integer>> getAllCoveragePercentages(@PathVariable Long profileId) {
+        return ResponseEntity.ok(profileFaultService.getAllCoveragePercentages(profileId));
     }
 }
