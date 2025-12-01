@@ -546,6 +546,69 @@
                 return `${profileId}_${deviceId}_${faultId}_${methodId}`;
             }
 
+            // Load saved diagnostic methods for all faults
+            function loadSavedMethods() {
+                const profileId = getProfileIdFromUrl();
+                if (!profileId) return Promise.resolve();
+
+                // Load both faults and coverage percentages in parallel
+                return $.when(
+                    $.ajax({
+                        url: `/api/profiles/${profileId}/faults`,
+                        method: 'GET'
+                    }),
+                    $.ajax({
+                        url: `/api/profiles/${profileId}/faults/coverage-percentages`,
+                        method: 'GET'
+                    })
+                ).done(function(faultsResponse, coverageResponse) {
+                    const faults = faultsResponse[0];
+                    const coveragePercentages = coverageResponse[0];
+
+                    console.log('Loaded saved faults:', faults);
+                    console.log('Loaded coverage percentages:', coveragePercentages);
+
+                    // For each saved fault, restore the selected method in the dropdown
+                    faults.forEach(fault => {
+                        if (fault.coveredMethodsIds) {
+                            try {
+                                // Parse the JSON to get the coverage data
+                                const coverageData = JSON.parse(fault.coveredMethodsIds);
+                                console.log('Parsed coverage data for fault', fault.faultTypeId, ':', coverageData);
+
+                                // coverageData is { deviceId: { methodId: coveragePercent } }
+                                for (const [deviceIdStr, methodData] of Object.entries(coverageData)) {
+                                    const deviceId = parseInt(deviceIdStr);
+                                    for (const [methodIdStr, defaultCoveragePercent] of Object.entries(methodData)) {
+                                        const methodId = parseInt(methodIdStr);
+                                        // Find the select dropdown for this fault and device
+                                        const $select = $(`.diagnostic-method-select[data-fault-id="${fault.faultTypeId}"][data-device-id="${deviceId}"]`);
+                                        if ($select.length) {
+                                            // Set the selected method
+                                            $select.val(methodId);
+                                            // Trigger change event to update the display
+                                            $select.trigger('change');
+                                            console.log(`Restored method ${methodId} for fault ${fault.faultTypeId} on device ${deviceId}`);
+
+                                            // The coverage percentage from coveredMethodsIds is the ACTUAL saved value
+                                            // (it gets updated when user changes it manually)
+                                            const cacheKey = getCoverageCacheKey(profileId, deviceId, fault.faultTypeId, methodId);
+                                            const coverageValue = parseInt(defaultCoveragePercent);
+                                            coverageCache.set(cacheKey, coverageValue);
+                                            console.log(`Cached coverage: ${cacheKey} = ${coverageValue}`);
+                                        }
+                                    }
+                                }
+                            } catch (e) {
+                                console.warn('Error parsing covered methods for fault', fault.faultTypeId, ':', e);
+                            }
+                        }
+                    });
+                }).fail(function(error) {
+                    console.error('Error loading saved methods or coverage percentages:', error);
+                });
+            }
+
             // Global function to initialize coverage
             window.initializeCoverage = function() {
                 try {
@@ -646,7 +709,7 @@
                 }
 
                 console.log('Coverage inputs initialization complete');
-            };
+            }
 
             // Update DCCOMP function
             window.updateDCCOMP = function(force = false) {
@@ -1458,6 +1521,7 @@
                 }
 
                 // Save coverage percentage to backend
+                console.log('Saving coverage percentage:', {profileId, deviceId, faultId, methodId, coveragePercent});
                 $.ajax({
                     url: `/api/profiles/${profileId}/faults/devices/${deviceId}/faults/${faultId}/method`,
                     method: 'POST',
@@ -1472,6 +1536,7 @@
                         // Update cache
                         const cacheKey = getCoverageCacheKey(profileId, deviceId, faultId, methodId);
                         coverageCache.set(cacheKey, coveragePercent);
+                        console.log('Cache updated:', cacheKey, '=', coveragePercent);
                     },
                     error: function(xhr, status, error) {
                         console.error('Error saving coverage percentage:', {status, error, response: xhr.responseText});
@@ -1510,10 +1575,27 @@
 
             // Initialize when document is ready
             $(function() {
-                // Initialize coverage displays and DCCOMP (only once!)
-                if (window.initializeCoverage) {
-                    window.initializeCoverage();
-                }
+                // First, load saved methods from backend, then initialize coverage
+                loadSavedMethods().done(function() {
+                    console.log('Saved methods loaded, waiting for DOM to update...');
+
+                    // Wait a bit for the DOM to update with selected methods
+                    setTimeout(function() {
+                        console.log('Initializing coverage after DOM update...');
+
+                        // Initialize coverage displays and DCCOMP (only once!)
+                        if (window.initializeCoverage) {
+                            window.initializeCoverage();
+                        }
+                    }, 100);
+                }).fail(function() {
+                    console.warn('Failed to load saved methods, initializing with defaults...');
+
+                    // Initialize coverage displays and DCCOMP even if loading fails
+                    if (window.initializeCoverage) {
+                        window.initializeCoverage();
+                    }
+                });
 
                 // Initialize the rest of the page
                 initPage();

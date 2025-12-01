@@ -257,7 +257,7 @@ public class ProfileFaultService {
                     newProfileFault.setId(profileFaultId);
                     newProfileFault.setProfile(profile);
                     newProfileFault.setFaultType(faultType);
-                    return newProfileFault;
+                    return profileFaultRepository.save(newProfileFault);
                 });
 
         // Получить текущие данные о методах и процентах
