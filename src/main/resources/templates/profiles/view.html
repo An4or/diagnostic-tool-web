@@ -584,18 +584,60 @@
                                         // Find the select dropdown for this fault and device
                                         const $select = $(`.diagnostic-method-select[data-fault-id="${fault.faultTypeId}"][data-device-id="${deviceId}"]`);
                                         if ($select.length) {
-                                            // Set the selected method
-                                            $select.val(methodId);
+// Set the selected method (only if methodId is valid)
+                                            if (methodId && methodId !== '' && methodId !== '0') {
+                                                $select.val(methodId);
+                                                console.log(`Restored method ${methodId} for fault ${fault.faultTypeId} on device ${deviceId}`);
+                                            } else {
+                                                // For default "Select method" option
+                                                $select.val('');
+                                                console.log(`No method selected for fault ${fault.faultTypeId} on device ${deviceId}`);
+
+                                                // Set coverage to 0 for default selection
+                                                const $coverageInput = $select.closest('.fault-item').find('.coverage-percent');
+                                                isUpdatingCoverage = true;
+                                                $coverageInput.val(0);
+                                                isUpdatingCoverage = false;
+
+                                                // Skip to next iteration as we don't need to process coverage for unselected methods
+                                                continue;
+                                            }
+
                                             // Trigger change event to update the display
                                             $select.trigger('change');
-                                            console.log(`Restored method ${methodId} for fault ${fault.faultTypeId} on device ${deviceId}`);
 
-                                            // The coverage percentage from coveredMethodsIds is the ACTUAL saved value
-                                            // (it gets updated when user changes it manually)
+                                            // Get the coverage percentage from the saved data
                                             const cacheKey = getCoverageCacheKey(profileId, deviceId, fault.faultTypeId, methodId);
-                                            const coverageValue = parseInt(defaultCoveragePercent);
+                                            let coverageValue = parseInt(defaultCoveragePercent);
+
+                                            // If the value is not a valid number, try to get the default from the method
+                                            if (isNaN(coverageValue)) {
+                                                const $option = $select.find(`option[value="${methodId}"]`);
+                                                if ($option.length) {
+                                                    const coverageMatch = $option.text().match(/\((LOW|MEDIUM|HIGH)\)/);
+                                                    if (coverageMatch) {
+                                                        const coverageLevel = coverageMatch[1];
+                                                        switch(coverageLevel) {
+                                                            case 'LOW': coverageValue = 60; break;
+                                                            case 'MEDIUM': coverageValue = 90; break;
+                                                            case 'HIGH': coverageValue = 99; break;
+                                                            default: coverageValue = 60;
+                                                        }
+                                                    } else {
+                                                        coverageValue = 60; // Default value if no coverage level found
+                                                    }
+                                                }
+                                            }
+
+                                            // Update the coverage input field
+                                            const $coverageInput = $select.closest('.fault-item').find('.coverage-percent');
+                                            isUpdatingCoverage = true;
+                                            $coverageInput.val(coverageValue);
+                                            isUpdatingCoverage = false;
+
+                                            // Cache the coverage value
                                             coverageCache.set(cacheKey, coverageValue);
-                                            console.log(`Cached coverage: ${cacheKey} = ${coverageValue}`);
+                                            console.log(`Cached coverage for ${cacheKey} = ${coverageValue}`);
                                         }
                                     }
                                 }
@@ -990,13 +1032,129 @@
                 return false;
             };
 
+            // Функция для изменения значения покрытия и сохранения на сервер
+            // Используется при нажатии на кнопки + и - рядом с полем ввода покрытия
+
+            function saveCoverage(profileId, deviceId, faultId, methodId, coveragePercent) {
+                console.log('Сохранение покрытия:', {profileId, deviceId, faultId, methodId, coveragePercent});
+
+                // Очищаем старые значения покрытия для этой неисправности
+                for (const key of coverageCache.keys()) {
+                    if (key.startsWith(`${profileId}_${deviceId}_${faultId}_`)) {
+                        coverageCache.delete(key);
+                    }
+                }
+
+                // Сохраняем новое значение покрытия в кэш
+                const cacheKey = getCoverageCacheKey(profileId, deviceId, faultId, methodId);
+                coverageCache.set(cacheKey, coveragePercent);
+
+                // Отправляем на сервер
+                return $.ajax({
+                    url: `/api/profiles/${profileId}/faults/devices/${deviceId}/faults/${faultId}/method`,
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        methodId: methodId,
+                        coveragePercent: coveragePercent
+                    }),
+                    success: function(response) {
+                        console.log('Покрытие успешно сохранено:', response);
+                        // showToast('Покрытие успешно сохранено', 'success');
+                    },
+                    error: function(xhr) {
+                        console.error('Ошибка при сохранении покрытия:', xhr);
+                        showToast('Ошибка при сохранении покрытия', 'danger');
+                        // В случае ошибки удаляем значение из кэша, чтобы при следующей попытке обновить
+                        coverageCache.delete(cacheKey);
+                    }
+                });
+            }
+
+            // Function to show toast notifications
+            function showToast(message, type = 'info') {
+                const toastId = 'toast-' + Date.now();
+                const toastHtml = `
+        <div id="${toastId}" class="toast align-items-center text-white bg-${type} border-0"
+             role="alert" aria-live="assertive" aria-atomic="true"
+             style="position: fixed; top: 20px; right: 20px; z-index: 1100; min-width: 250px;">
+            <div class="d-flex">
+                <div class="toast-body">
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto"
+                        data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    `;
+
+                const $toast = $(toastHtml);
+                $('body').append($toast);
+                const toast = new bootstrap.Toast($toast[0]);
+                toast.show();
+
+                // Remove toast after it's hidden
+                $toast.on('hidden.bs.toast', function() {
+                    $toast.remove();
+                });
+            }
+
+            function getProfileIdFromUrl() {
+                const match = window.location.pathname.match(/\/profiles\/(\d+)/);
+                return match ? match[1] : null;
+            }
+
+            // Функция для изменения значения покрытия и сохранения на сервер
             window.adjustPercentage = function(button, change) {
-                const $input = $(button).closest('.input-group').find('input.coverage-percent');
-                let value = parseInt($input.val()) || 0;
-                value = Math.max(0, Math.min(100, value + change));
-                $input.val(value).trigger('change');
-                if (window.updateDCCOMP) window.updateDCCOMP();
-                return false;
+                try {
+                    const $input = $(button).closest('.input-group').find('input.coverage-percent');
+                    const deviceId = $input.data('device-id');
+                    const faultId = $input.data('fault-id');
+                    const methodSelect = $(`.diagnostic-method-select[data-device-id="${deviceId}"][data-fault-id="${faultId}"]`);
+                    const methodId = methodSelect.val();
+
+                    if (!methodId) {
+                        showToast('Сначала выберите метод диагностики', 'warning');
+                        return false;
+                    }
+
+                    // Получаем текущее значение и корректируем его
+                    let value = parseInt($input.val()) || 0;
+                    value = Math.max(0, Math.min(100, value + change));
+
+                    // Обновляем значение в поле ввода
+                    isUpdatingCoverage = true;
+                    $input.val(value);
+                    isUpdatingCoverage = false;
+
+                    // Сохраняем на сервер
+                    const profileId = getProfileIdFromUrl();
+                    if (profileId) {
+                        // Сохраняем покрытие и обновляем расчеты после успешного сохранения
+                        saveCoverage(profileId, deviceId, faultId, methodId, value)
+                            .then(() => {
+                                // Обновляем расчеты после успешного сохранения
+                                if (window.updateDCCOMP) {
+                                    window.updateDCCOMP();
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Ошибка при сохранении покрытия:', error);
+                                showToast('Ошибка при сохранении покрытия', 'danger');
+                                // Восстанавливаем предыдущее значение при ошибке
+                                const previousValue = parseInt($input.attr('data-prev-value')) || 0;
+                                isUpdatingCoverage = true;
+                                $input.val(previousValue);
+                                isUpdatingCoverage = false;
+                            });
+                    }
+
+                    return false;
+                } catch (error) {
+                    console.error('Ошибка при изменении покрытия:', error);
+                    showToast('Произошла ошибка при обновлении покрытия', 'danger');
+                    return false;
+                }
             };
 
             function updateSValue(input) {
@@ -1377,66 +1535,84 @@
                 updateMethodVisibility();
             };
 
-            // Handle diagnostic method selection
             $(document).on('change', '.diagnostic-method-select', function() {
                 const $select = $(this);
-
-                // Get the profile ID
-                const profileId = getProfileIdFromUrl();
-                if (!profileId) {
-                    console.error('Cannot update method: No profile ID found');
-                    return;
-                }
-
-                // Get other required IDs
                 const methodId = $select.val();
                 const faultId = $select.data('fault-id');
                 const deviceId = $select.data('device-id');
+                const profileId = getProfileIdFromUrl();
 
-                if (!methodId || !faultId || !deviceId) {
-                    console.error('Missing required IDs:', {methodId, faultId, deviceId});
+                if (!faultId || !deviceId || !profileId) {
+                    console.error('Missing required IDs:', {faultId, deviceId, profileId});
                     return;
                 }
 
-                console.log('Updating method:', {profileId, deviceId, faultId, methodId});
+                // Save the current value as previous value for potential rollback
+                $select.data('previous-value', $select.val());
 
-                // Show loading state
-                $select.prop('disabled', true);
+                // Get the coverage input
+                const $coverageInput = $select.closest('.fault-item').find('.coverage-percent');
 
-                // Update coverage display immediately for better UX
-                updateCoverageDisplay($select[0]);
+                // Check if it's the default "Select method" option
+                if (!methodId) {
+                    // Clear the coverage input
+                    isUpdatingCoverage = true;
+                    $coverageInput.val(0);
+                    isUpdatingCoverage = false;
 
-                // Update DCCOMP calculation
-                const $row = $select.closest('tr').closest('table').closest('tr');
-                if ($row.length) {
-                    updateLambdaCalculations($row[0]);
+                    // Make an API call to clear the method and set coverage to 0
+                    $.ajax({
+                        url: `/api/profiles/${profileId}/faults/devices/${deviceId}/faults/${faultId}/clear-method`,
+                        method: 'POST',
+                        success: function(response) {
+                            console.log('Method cleared successfully');
+                            // Clear the cache for this fault
+                            for (const key of coverageCache.keys()) {
+                                if (key.startsWith(`${profileId}_${deviceId}_${faultId}_`)) {
+                                    coverageCache.delete(key);
+                                }
+                            }
+                            // Update UI and calculations
+                            if (window.updateDCCOMP) {
+                                window.updateDCCOMP(true);
+                            }
+                            // showToast('Метод диагностики успешно удален', 'success');
+                        },
+                        error: function(xhr, status, error) {
+                            console.error('Error clearing method:', {status, error, response: xhr.responseText});
+                            // Revert the select to its previous value
+                            const previousValue = $select.data('previous-value');
+                            if (previousValue !== undefined) {
+                                $select.val(previousValue);
+                            }
+                            showToast('Ошибка при удалении метода диагностики', 'danger');
+                        }
+                    });
+                    return;
                 }
 
-                // Get current coverage percentage
-                const $coverageInput = $select.closest('.fault-item').find('.coverage-percent');
-                let coveragePercent = parseInt($coverageInput.val()) || 0;
-
-                // If coverage is 0, try to get default value from method level
+                // Handle selection of an actual diagnostic method
                 const selectedOption = $select.find('option:selected');
-                if (coveragePercent === 0 && selectedOption.length) {
-                    const coverageMatch = selectedOption.text().match(/\((LOW|MEDIUM|HIGH)\)/);
-                    if (coverageMatch) {
-                        const coverageLevel = coverageMatch[1];
-                        switch(coverageLevel) {
-                            case 'LOW': coveragePercent = 60; break;
-                            case 'MEDIUM': coveragePercent = 90; break;
-                            case 'HIGH': coveragePercent = 99; break;
-                        }
-                        // Update the input field
-                        isUpdatingCoverage = true;
-                        $coverageInput.val(coveragePercent);
-                        isUpdatingCoverage = false;
+                const coverageMatch = selectedOption.text().match(/\((LOW|MEDIUM|HIGH)\)/);
+                let coveragePercent = 0;
+
+                // Set default coverage based on method level
+                if (coverageMatch) {
+                    const coverageLevel = coverageMatch[1];
+                    switch(coverageLevel) {
+                        case 'LOW': coveragePercent = 60; break;
+                        case 'MEDIUM': coveragePercent = 90; break;
+                        case 'HIGH': coveragePercent = 99; break;
+                        default: coveragePercent = 0;
                     }
                 }
 
-                console.log('Saving method with coverage:', {methodId, coveragePercent, faultId, deviceId});
+                // Update the coverage input
+                isUpdatingCoverage = true;
+                $coverageInput.val(coveragePercent);
+                isUpdatingCoverage = false;
 
-                // Make the API call
+                // Save the method selection and coverage
                 $.ajax({
                     url: `/api/profiles/${profileId}/faults/devices/${deviceId}/faults/${faultId}/method`,
                     method: 'POST',
@@ -1447,35 +1623,24 @@
                     }),
                     success: function(response) {
                         console.log('Method updated successfully:', response);
-
-                        // Update cache with the saved value
+                        // Update cache
                         const cacheKey = getCoverageCacheKey(profileId, deviceId, faultId, methodId);
                         coverageCache.set(cacheKey, coveragePercent);
 
-                        // Update the UI (skip loading from backend as we just saved)
-                        if (window.updateCoverageDisplay) {
-                            window.updateCoverageDisplay($select[0], true);
-                        }
-
-                        // Force update DCCOMP
+                        // Update calculations
                         if (window.updateDCCOMP) {
                             window.updateDCCOMP(true);
                         }
+                        // showToast('Метод диагностики успешно сохранен', 'success');
                     },
                     error: function(xhr, status, error) {
                         console.error('Error updating method:', {status, error, response: xhr.responseText});
-
                         // Revert the select to its previous value
                         const previousValue = $select.data('previous-value');
                         if (previousValue !== undefined) {
                             $select.val(previousValue);
                         }
-
-                        // Show error message
-                        // alert('Ошибка при обновлении метода диагностики. Пожалуйста, попробуйте снова.');
-                    },
-                    complete: function() {
-                        $select.prop('disabled', false);
+                        showToast('Ошибка при сохранении метода диагностики', 'danger');
                     }
                 });
             });

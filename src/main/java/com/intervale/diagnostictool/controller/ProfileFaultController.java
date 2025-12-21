@@ -124,4 +124,18 @@ public class ProfileFaultController {
     public ResponseEntity<Map<String, Integer>> getAllCoveragePercentages(@PathVariable Long profileId) {
         return ResponseEntity.ok(profileFaultService.getAllCoveragePercentages(profileId));
     }
+
+    @PostMapping("/devices/{deviceId}/faults/{faultId}/clear-method")
+    @Operation(summary = "Clear diagnostic method and set coverage to 0 for a fault")
+    public ResponseEntity<Map<String, Object>> clearFaultMethod(
+            @PathVariable Long profileId,
+            @PathVariable Long deviceId,
+            @PathVariable Long faultId) {
+        profileFaultService.clearFaultMethod(profileId, deviceId, faultId);
+
+        Map<String, Object> response = new java.util.HashMap<>();
+        response.put("success", true);
+        response.put("message", "Method cleared and coverage set to 0");
+        return ResponseEntity.ok(response);
+    }
 }

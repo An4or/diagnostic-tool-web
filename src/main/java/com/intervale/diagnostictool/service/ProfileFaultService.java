@@ -262,42 +262,28 @@ public class ProfileFaultService {
 
         // Получить текущие данные о методах и процентах
         Map<String, Map<String, Integer>> coverageData = getCoverageData(profileFault);
-        log.debug("Current coverage data before update: {}", coverageData);
 
-        // Обновить процент для конкретного устройства и метода
-        Map<String, Integer> deviceData = coverageData.computeIfAbsent(deviceId.toString(), k -> {
-            log.debug("Creating new device entry for deviceId: {}", deviceId);
-            return new HashMap<>();
-        });
+        // Создаем новую запись для устройства
+        Map<String, Integer> deviceData = new HashMap<>();
+
+        // Добавляем только текущий метод с новым процентом покрытия
+        // Старые методы для этого устройства будут перезаписаны
         deviceData.put(methodId.toString(), coveragePercent);
-        log.debug("Updated device data: {}", deviceData);
-        log.debug("Updated coverage data: {}", coverageData);
 
-        // Сохранить обратно в JSON
+        // Обновляем данные покрытия для устройства
+        coverageData.put(deviceId.toString(), deviceData);
+
+        // Сохраняем обратно в JSON
         try {
             String jsonData = objectMapper.writeValueAsString(coverageData);
-            log.debug("Serialized JSON data: {}", jsonData);
             profileFault.setCoveredMethodsIds(jsonData);
-            ProfileFault saved = profileFaultRepository.save(profileFault);
-            log.debug("Saved ProfileFault with ID: {}", saved.getId());
-            log.debug("Saved coverage data: {}", saved.getCoveredMethodsIds());
+            profileFaultRepository.save(profileFault);
 
-            // Flush to ensure data is written to DB immediately
-            profileFaultRepository.flush();
-
-            // Verify the data was saved correctly
-            Optional<ProfileFault> verify = profileFaultRepository.findById(profileFaultId);
-            if (verify.isPresent()) {
-                log.debug("Verified saved data: {}", verify.get().getCoveredMethodsIds());
-            } else {
-                log.error("ERROR: Data was not found immediately after save! profileId={}, faultId={}", profileId, faultId);
-            }
-
-            log.info("Successfully saved coverage data: {} for profileId={}, deviceId={}, faultId={}, methodId={}, coveragePercent={}",
-                    jsonData, profileId, deviceId, faultId, methodId, coveragePercent);
+            log.info("Обновлено покрытие: profileId={}, deviceId={}, faultId={}, methodId={}, coveragePercent={}",
+                    profileId, deviceId, faultId, methodId, coveragePercent);
         } catch (JsonProcessingException e) {
-            log.error("Error serializing coverage data", e);
-            throw new RuntimeException("Error serializing coverage data", e);
+            log.error("Ошибка при сохранении данных о покрытии", e);
+            throw new RuntimeException("Ошибка при сохранении данных о покрытии", e);
         }
     }
 
@@ -371,6 +357,40 @@ public class ProfileFaultService {
                 log.warn("Error parsing coverage data as List<Long>: {}", e2.getMessage());
                 return new HashMap<>();
             }
+        }
+    }
+
+    /**
+     * Clears the diagnostic method and sets coverage to 0 for a specific fault on a device.
+     *
+     * @param profileId the ID of the profile
+     * @param deviceId the ID of the device
+     * @param faultId the ID of the fault
+     * @throws ResourceNotFoundException if the profile fault is not found
+     */
+    @Transactional
+    public void clearFaultMethod(Long profileId, Long deviceId, Long faultId) {
+        ProfileFaultId profileFaultId = new ProfileFaultId(profileId, faultId);
+        ProfileFault profileFault = profileFaultRepository.findById(profileFaultId)
+                .orElseThrow(() -> new ResourceNotFoundException("ProfileFault", "id", profileFaultId));
+
+        // Parse the existing coverage data
+        Map<String, Map<String, Integer>> coverageData = getCoverageData(profileFault);
+
+        // Remove the device entry to clear the method and coverage
+        coverageData.remove(deviceId.toString());
+
+        try {
+            // Save the updated coverage data
+            String jsonData = objectMapper.writeValueAsString(coverageData);
+            profileFault.setCoveredMethodsIds(jsonData);
+            profileFaultRepository.save(profileFault);
+
+            log.info("Cleared method for profileId={}, deviceId={}, faultId={}",
+                    profileId, deviceId, faultId);
+        } catch (JsonProcessingException e) {
+            log.error("Error clearing method", e);
+            throw new RuntimeException("Error clearing method", e);
         }
     }
 }
