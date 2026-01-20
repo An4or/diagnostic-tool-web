@@ -255,6 +255,28 @@
             display: block;
             font-weight: 500;
         }
+
+        /* Стили для кликабельных категорий */
+        .category-cell {
+            cursor: pointer;
+            color: #0d6efd;
+            text-decoration: underline;
+            transition: color 0.2s ease;
+        }
+
+        .category-cell:hover {
+            color: #0a58ca;
+            text-decoration: underline;
+        }
+
+        /* Стили для модального окна с таблицей */
+        #coverageLevelsModal .table td {
+            vertical-align: middle;
+        }
+
+        #coverageLevelsModal .table td.align-middle {
+            vertical-align: middle;
+        }
     </style>
 </head>
 <body>
@@ -308,7 +330,9 @@
                         </thead>
                         <tbody>
                         <tr th:each="device : ${profile.devices}">
-                            <td th:text="${device.category?.name ?: 'N/A'}">Category</td>
+                            <td class="category-cell" style="cursor: pointer; color: #0d6efd; text-decoration: underline;"
+                                th:text="${device.category?.name ?: 'N/A'}"
+                                th:data-category-name="${device.category?.name ?: 'N/A'}">Category</td>
                             <td th:text="${device.name}">Device Name</td>
                             <td style="min-width: 400px;">
                                 <div class="faults-container">
@@ -519,6 +543,199 @@
             <a th:href="@{/profiles/{id}/edit(id=${profile.id})}" class="btn btn-primary">
                 <i class="bi bi-pencil-square me-1"></i> Edit Profile
             </a>
+        </div>
+    </div>
+
+    <!-- Модальное окно с таблицей уровней охвата диагностикой -->
+    <div class="modal fade" id="coverageLevelsModal" tabindex="-1" aria-labelledby="coverageLevelsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="coverageLevelsModalLabel">Уровни и диапазоны охвата диагностикой различных подсистем (компонентов)</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-sm">
+                            <thead class="table-light">
+                            <tr>
+                                <th style="width: 30%;">Компонент</th>
+                                <th style="width: 23%;">Низкий охват диагностикой</th>
+                                <th style="width: 23%;">Средний охват диагностикой</th>
+                                <th style="width: 24%;">Высокий охват диагностикой</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <!-- Процессор -->
+                            <tr>
+                                <td><strong>Процессор:</strong></td>
+                                <td>в сумме менее 70 %</td>
+                                <td>в сумме менее 90 %</td>
+                                <td>-</td>
+                            </tr>
+                            <tr>
+                                <td>- регистр</td>
+                                <td>50 %-70 %</td>
+                                <td>85 %-90 %</td>
+                                <td>99 %-99,99 %</td>
+                            </tr>
+                            <tr>
+                                <td>- внутренняя регистровая память</td>
+                                <td>50 %- 60 %</td>
+                                <td>75 %-95 %</td>
+                                <td>-</td>
+                            </tr>
+                            <tr>
+                                <td>- блок кодирования и выполнения, включающий регистр тэгов</td>
+                                <td>50 %-70 %</td>
+                                <td>85 %-98 %</td>
+                                <td>-</td>
+                            </tr>
+                            <tr>
+                                <td>- устройство вычисления адреса</td>
+                                <td>50 %-60 %</td>
+                                <td>60 %-90 %</td>
+                                <td>85 %-98 %</td>
+                            </tr>
+                            <tr>
+                                <td>- счетчик команд</td>
+                                <td>50 %-70 %</td>
+                                <td>-</td>
+                                <td>-</td>
+                            </tr>
+                            <tr>
+                                <td>- указатель стека</td>
+                                <td>40 %-60 %</td>
+                                <td>-</td>
+                                <td>-</td>
+                            </tr>
+                            <!-- Шина -->
+                            <tr>
+                                <td><strong>Шина:</strong></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td>- модуль управления памятью</td>
+                                <td>50 %</td>
+                                <td>70 %</td>
+                                <td>90 %-99%</td>
+                            </tr>
+                            <tr>
+                                <td>- устройство управления шины</td>
+                                <td>50 %</td>
+                                <td>70 %</td>
+                                <td>90 %-99%</td>
+                            </tr>
+                            <!-- Обработка прерываний -->
+                            <tr>
+                                <td><strong>Обработка прерываний</strong></td>
+                                <td>40 %-60%</td>
+                                <td>60 %-90 %</td>
+                                <td>85 %-98 %</td>
+                            </tr>
+                            <!-- Кварцевый тактовый генератор -->
+                            <tr>
+                                <td><strong>Кварцевый тактовый генератор</strong></td>
+                                <td>50 %</td>
+                                <td>-</td>
+                                <td>95 %-99 %</td>
+                            </tr>
+                            <!-- Контроль выполнения программы -->
+                            <tr>
+                                <td><strong>Контроль выполнения программы:</strong></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td>- временное</td>
+                                <td>40 %-60%</td>
+                                <td>60 % -80 %</td>
+                                <td>-</td>
+                            </tr>
+                            <tr>
+                                <td>- логическое</td>
+                                <td>40 %-60%</td>
+                                <td>60 % - 90 %</td>
+                                <td>-</td>
+                            </tr>
+                            <tr>
+                                <td>- временное и логическое</td>
+                                <td>-</td>
+                                <td>65 % - 90 %</td>
+                                <td>90 % - 98 %</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Постоянная память</strong></td>
+                                <td>50 %-70 %</td>
+                                <td>99%</td>
+                                <td>99,99 %</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Непостоянная память</strong></td>
+                                <td>50 %-70 %</td>
+                                <td>85 %-90 %</td>
+                                <td>99 %-99,99 %</td>
+                            </tr>
+                            <!-- Дискретное оборудование -->
+                            <tr>
+                                <td><strong>Дискретное оборудование:</strong></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td>- цифровой ввод/вывод</td>
+                                <td>70 %</td>
+                                <td>90 %</td>
+                                <td>99 %</td>
+                            </tr>
+                            <tr>
+                                <td>- аналоговый ввод/вывод</td>
+                                <td>50 %-60 %</td>
+                                <td>70 %-85 %</td>
+                                <td>99 %</td>
+                            </tr>
+                            <tr>
+                                <td>- источник питания</td>
+                                <td>50 %-60 %</td>
+                                <td>70 %-85 %</td>
+                                <td>99 %</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Устройство связи и запоминающее устройство большой емкости</strong></td>
+                                <td>90 %</td>
+                                <td>99,9 %</td>
+                                <td>99,99 %</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Электромеханические устройства</strong></td>
+                                <td>90 %</td>
+                                <td>99 %</td>
+                                <td>99,9 %</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Датчики</strong></td>
+                                <td>50 %-70 %</td>
+                                <td>70 %- 85 %</td>
+                                <td>99 %</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Оконечные элементы</strong></td>
+                                <td>50 %-70 %</td>
+                                <td>70 %- 85 %</td>
+                                <td>99 %</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -1736,6 +1953,13 @@
 
                 // Sort the table
                 sortTable(columnIndex, isAsc);
+            });
+
+            // Обработчик клика на категорию для открытия модального окна
+            $(document).on('click', '.category-cell', function() {
+                const categoryName = $(this).data('category-name') || $(this).text().trim();
+                const modal = new bootstrap.Modal(document.getElementById('coverageLevelsModal'));
+                modal.show();
             });
 
             // Initialize when document is ready
