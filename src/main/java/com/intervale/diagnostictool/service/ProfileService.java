@@ -8,7 +8,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -55,10 +54,6 @@ public class ProfileService {
         if (profileRepository.existsByName(profile.getName())) {
             throw new IllegalStateException("Profile with name " + profile.getName() + " already exists");
         }
-        
-        // Set default values
-        profile.setCreatedAt(LocalDateTime.now());
-        profile.setUpdatedAt(LocalDateTime.now());
         
         Profile savedProfile = profileRepository.save(profile);
         

@@ -17,7 +17,7 @@ public class ArchitectureTypeFormatter {
             case ONE_OUT_OF_TWO:
                 return "1oo2";
             case TWO_OUT_OF_THREE:
-                return "3oo3";
+                return "1oo3";
             default:
                 return type.name();
         }

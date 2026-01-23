@@ -68,7 +68,7 @@ public class DiagnosticMethodService {
         
         // Filter methods by architecture suitability and sort by coverage percentage
         return allMethods.stream()
-                .filter(method -> method.isSuitableForArchitecture(architecture))
+//                .filter(method -> method.isSuitableForArchitecture(architecture))
                 .sorted(DiagnosticMethod::compareByCoveragePercent)
                 .collect(Collectors.toList());
     }
@@ -90,8 +90,8 @@ public class DiagnosticMethodService {
         double product = 1.0;
         for (Long methodId : methodIds) {
             DiagnosticMethod method = findById(methodId);
-            if (method != null && method.getDiagnosticCoverage() != null) {
-                double coverage = method.getDiagnosticCoverage().doubleValue() / 100.0;
+            if (method != null && method.getCoveragePercent() != null) {
+                double coverage = method.getCoveragePercent().doubleValue() / 100.0;
                 product *= (1.0 - coverage);
             }
         }

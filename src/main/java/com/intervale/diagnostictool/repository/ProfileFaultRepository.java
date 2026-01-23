@@ -21,21 +21,22 @@ public interface ProfileFaultRepository extends JpaRepository<ProfileFault, Prof
     
     Optional<ProfileFault> findByProfileIdAndFaultTypeId(Long profileId, Long faultTypeId);
     
-    @Query("SELECT pf FROM ProfileFault pf WHERE pf.profile.id = :profileId AND pf.faultType.deviceCategory.id = :categoryId")
+    @Query("SELECT pf FROM ProfileFault pf WHERE pf.profile.id = :profileId AND pf.faultType.device.category.id = :categoryId")
     List<ProfileFault> findByProfileIdAndDeviceCategoryId(@Param("profileId") Long profileId, 
                                                          @Param("categoryId") Long categoryId);
-    
+
+    @Query("SELECT pf FROM ProfileFault pf WHERE pf.profile.id = :profileId AND pf.faultType.device.id = :deviceId")
+    List<ProfileFault> findByProfileIdAndDeviceId(@Param("profileId") Long profileId,
+                                                          @Param("deviceId") Long deviceId);
+
     @Query("SELECT pf FROM ProfileFault pf WHERE pf.profile.id = :profileId AND pf.isCovered = :isCovered")
     List<ProfileFault> findByProfileIdAndCovered(@Param("profileId") Long profileId, 
                                                @Param("isCovered") boolean isCovered);
                                                
     @Query("SELECT pf FROM ProfileFault pf " +
-           "JOIN pf.faultType ft " +
-           "JOIN ft.deviceCategory dc " +
-           "JOIN dc.devices d " +
            "WHERE pf.profile.id = :profileId " +
-           "AND d.id = :deviceId " +
-           "AND ft.id = :faultTypeId")
+           "AND pf.faultType.device.id = :deviceId " +
+           "AND pf.faultType.id = :faultTypeId")
     Optional<ProfileFault> findByProfileIdAndDeviceIdAndFaultTypeId(
             @Param("profileId") Long profileId,
             @Param("deviceId") Long deviceId,

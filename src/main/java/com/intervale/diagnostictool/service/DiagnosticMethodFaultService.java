@@ -62,7 +62,8 @@ public class DiagnosticMethodFaultService {
                 .orElseThrow(() -> new ResourceNotFoundException("FaultType", "id", request.getFaultTypeId()));
 
         // Ensure the method and fault type belong to the same device category
-        if (!diagnosticMethod.getDeviceCategory().getId().equals(faultType.getDeviceCategory().getId())) {
+        if (faultType.getDevice() == null || faultType.getDevice().getCategory() == null ||
+            !diagnosticMethod.getDeviceCategory().getId().equals(faultType.getDevice().getCategory().getId())) {
             throw new IllegalArgumentException("Diagnostic method and fault type must belong to the same device category");
         }
 

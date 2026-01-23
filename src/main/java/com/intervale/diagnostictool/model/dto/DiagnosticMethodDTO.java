@@ -18,7 +18,7 @@ public class DiagnosticMethodDTO {
     private String name;
     private String description;
     private DiagnosticMethod.Effectiveness effectiveness;
-    private BigDecimal diagnosticCoverage;
+    private BigDecimal coveragePercent;
     private DiagnosticMethod.Suitability suitability;
     private String gostReference;
     
@@ -34,7 +34,7 @@ public class DiagnosticMethodDTO {
             method.getName(),
             method.getDescription(),
             method.getEffectiveness(),
-            method.getDiagnosticCoverage(),
+            method.getCoveragePercent(),
             method.getSuitability(),
             method.getGostReference()
         );

@@ -137,6 +137,12 @@ public class ProfileFaultService {
     }
 
     @Transactional(readOnly = true)
+    public List<ProfileFaultDto> findByProfileIdAndDeviceId(Long profileId, Long deviceId) {
+        return faultMapper.toProfileFaultDtoList(
+                profileFaultRepository.findByProfileIdAndDeviceId(profileId, deviceId));
+    }
+
+    @Transactional(readOnly = true)
     public Map<String, Object> getCoverageStats(Long profileId) {
         long totalFaults = profileFaultRepository.countTotalFaultsByProfileId(profileId);
         long coveredFaults = profileFaultRepository.countCoveredFaultsByProfileId(profileId);

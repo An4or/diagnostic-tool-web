@@ -80,9 +80,6 @@ public class DiagnosticMethod {
     @Column(name = "effectiveness", nullable = false)
     private Effectiveness effectiveness = Effectiveness.MEDIUM;
 
-    @Column(name = "diagnostic_coverage", nullable = false, precision = 5, scale = 2)
-    private BigDecimal diagnosticCoverage = BigDecimal.ZERO;
-
     @Enumerated(EnumType.STRING)
     @Column(name = "suitability", nullable = false)
     private Suitability suitability = Suitability.MEDIUM;

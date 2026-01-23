@@ -6,8 +6,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
-
 @Data
 @Builder
 @NoArgsConstructor
@@ -17,12 +15,12 @@ public class FaultTypeDto {
     private String code;
     private String name;
     private String description;
+    private Long deviceId;
+    private String deviceName;
     private Long deviceCategoryId;
     private String deviceCategoryName;
     private CoverageLevel coverageRequirement;
     private String gostReference;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
     
     // Additional fields for UI
     private boolean isCovered;

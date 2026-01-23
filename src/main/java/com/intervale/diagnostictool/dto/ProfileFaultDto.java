@@ -5,7 +5,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,8 +24,6 @@ public class ProfileFaultDto {
     private String coveredMethodsIds; // JSON array of method IDs
     private List<Long> coveredMethods = new ArrayList<>(); // For easier processing
     private String notes;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
     
     // Additional fields for UI
     private String deviceCategoryName;

@@ -69,12 +69,15 @@ public class ProfileController {
             
             if (device.getCategory() != null) {
                 // Получаем все неисправности для категории устройства
-                List<FaultTypeDto> deviceFaults = faultTypeService.findByDeviceCategoryId(device.getCategory().getId());
-                
+//                List<FaultTypeDto> deviceFaults = faultTypeService.findByDeviceCategoryId(device.getCategory().getId());
+                List<FaultTypeDto> deviceFaults = faultTypeService.findByDeviceId(device.getId());
+
                 // Получаем привязанные неисправности профиля для этого устройства
-                List<ProfileFaultDto> profileFaults = profileFaultService.findByProfileIdAndDeviceCategoryId(
-                    id, device.getCategory().getId());
-                
+//                List<ProfileFaultDto> profileFaults = profileFaultService.findByProfileIdAndDeviceCategoryId(
+//                    id, device.getCategory().getId());
+                List<ProfileFaultDto> profileFaults = profileFaultService.findByProfileIdAndDeviceId(
+                    id, device.getId());
+
                 // Создаем мапу для быстрого доступа к привязанным неисправностям
                 Map<Long, ProfileFaultDto> profileFaultsMap = profileFaults.stream()
                     .collect(Collectors.toMap(

@@ -6,8 +6,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
-
 @Data
 @Builder
 @NoArgsConstructor
@@ -21,7 +19,6 @@ public class DiagnosticMethodFaultDto {
     private String faultTypeCode;
     private String faultTypeName;
     private CoverageLevel effectiveness;
-    private LocalDateTime createdAt;
     
     // Additional fields for UI
     private boolean selected;

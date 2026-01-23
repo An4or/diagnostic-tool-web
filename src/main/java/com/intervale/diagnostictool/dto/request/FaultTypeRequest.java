@@ -22,8 +22,8 @@ public class FaultTypeRequest {
     
     private String description;
     
-    @NotNull(message = "Device category ID is required")
-    private Long deviceCategoryId;
+    @NotNull(message = "Device ID is required")
+    private Long deviceId;
     
     @NotNull(message = "Coverage requirement is required")
     private CoverageLevel coverageRequirement;

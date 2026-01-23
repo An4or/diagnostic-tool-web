@@ -5,8 +5,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
-
 /**
  * DTO for {@link com.intervale.diagnostictool.model.DiagnosticMethod}
  */
@@ -23,8 +21,6 @@ public class DiagnosticMethodDto {
     private String returnType;
     private String category;
     private boolean active;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
     
     // Additional fields for UI
     private Long deviceCategoryId;

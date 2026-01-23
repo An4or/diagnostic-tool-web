@@ -1,6 +1,5 @@
 package com.intervale.diagnostictool.repository;
 
-import com.intervale.diagnostictool.model.DeviceCategory;
 import com.intervale.diagnostictool.model.FaultType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -11,12 +10,14 @@ import java.util.List;
 
 @Repository
 public interface FaultTypeRepository extends JpaRepository<FaultType, Long> {
-    
-    List<FaultType> findByDeviceCategory(DeviceCategory deviceCategory);
-    
-    List<FaultType> findByDeviceCategoryId(Long deviceCategoryId);
-    
-    @Query("SELECT ft FROM FaultType ft WHERE ft.deviceCategory.id IN :categoryIds")
+
+    @Query("SELECT ft FROM FaultType ft WHERE ft.device.id = :deviceId")
+    List<FaultType> findByDeviceId(Long deviceId);
+
+    @Query("SELECT ft FROM FaultType ft WHERE ft.device.category.id = :deviceCategoryId")
+    List<FaultType> findByDeviceCategoryId(@Param("deviceCategoryId") Long deviceCategoryId);
+
+    @Query("SELECT ft FROM FaultType ft WHERE ft.device.category.id IN :categoryIds")
     List<FaultType> findByDeviceCategoryIds(@Param("categoryIds") List<Long> categoryIds);
     
     @Query("SELECT ft FROM FaultType ft JOIN FETCH ft.diagnosticMethods dm WHERE dm.diagnosticMethod.id = :methodId")

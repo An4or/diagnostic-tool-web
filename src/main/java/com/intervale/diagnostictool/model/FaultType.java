@@ -5,16 +5,13 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 
-import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
 @Getter
 @Setter
-@ToString(exclude = {"deviceCategory", "diagnosticMethods", "profileFaults"})
+@ToString(exclude = {"deviceCategory", "device", "diagnosticMethods", "profileFaults"})
 @Entity
 @Table(name = "fault_types")
 public class FaultType {
@@ -35,6 +32,10 @@ public class FaultType {
     @JoinColumn(name = "device_category_id", nullable = false)
     private DeviceCategory deviceCategory;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "device_id", nullable = false)
+    private Device device;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "coverage_requirement", nullable = false, length = 20)
     private CoverageLevel coverageRequirement;
@@ -48,23 +49,16 @@ public class FaultType {
     @OneToMany(mappedBy = "faultType", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<ProfileFault> profileFaults = new HashSet<>();
 
-    @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
-
-    @UpdateTimestamp
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
-
     public FaultType() {
     }
 
-    public FaultType(String code, String name, String description, DeviceCategory deviceCategory, 
+    public FaultType(String code, String name, String description, DeviceCategory deviceCategory, Device device,
                     CoverageLevel coverageRequirement, String gostReference) {
         this.code = code;
         this.name = name;
         this.description = description;
         this.deviceCategory = deviceCategory;
+        this.device = device;
         this.coverageRequirement = coverageRequirement;
         this.gostReference = gostReference;
     }

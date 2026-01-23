@@ -12,7 +12,7 @@ import java.util.Set;
 
 @Getter
 @Setter
-@ToString(exclude = {"devices", "diagnosticMethods", "faultTypes"})
+@ToString(exclude = {"devices", "diagnosticMethods"})
 @Entity
 @Table(name = "device_categories")
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
@@ -38,9 +38,6 @@ public class DeviceCategory {
     @JsonIgnore
     private Set<DiagnosticMethod> diagnosticMethods = new HashSet<>();
     
-    @OneToMany(mappedBy = "deviceCategory", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonIgnore
-    private Set<FaultType> faultTypes = new HashSet<>();
     
     public DeviceCategory() {}
     
@@ -64,17 +61,6 @@ public class DeviceCategory {
     public void removeDevice(Device device) {
         devices.remove(device);
         device.setCategory(null);
-    }
-    
-    // Helper methods for fault types
-    public void addFaultType(FaultType faultType) {
-        faultTypes.add(faultType);
-        faultType.setDeviceCategory(this);
-    }
-    
-    public void removeFaultType(FaultType faultType) {
-        faultTypes.remove(faultType);
-        faultType.setDeviceCategory(null);
     }
     
     public void addDiagnosticMethod(DiagnosticMethod method) {

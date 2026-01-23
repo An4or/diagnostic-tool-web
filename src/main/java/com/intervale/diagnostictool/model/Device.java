@@ -21,7 +21,7 @@ public class Device {
     public enum ArchitectureType {
         ONE_OUT_OF_ONE("1oo1"),
         ONE_OUT_OF_TWO("1oo2"),
-        TWO_OUT_OF_THREE("3oo3");
+        TWO_OUT_OF_THREE("1oo3");
 
         private final String code;
 

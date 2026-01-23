@@ -27,7 +27,8 @@ public class FaultMapper {
                 request.getCode(),
                 request.getName(),
                 request.getDescription(),
-                null, // deviceCategory should be set separately as it's a relationship
+                null,
+                null, // device should be set separately as it's a relationship
                 request.getCoverageRequirement(),
                 request.getGostReference()
         );
@@ -41,11 +42,12 @@ public class FaultMapper {
                 .name(entity.getName())
                 .description(entity.getDescription())
                 .deviceCategoryId(entity.getDeviceCategory() != null ? entity.getDeviceCategory().getId() : null)
-                .deviceCategoryName(entity.getDeviceCategory() != null ? entity.getDeviceCategory().getName() : null)
+                .deviceId(entity.getDevice() != null ? entity.getDevice().getId() : null)
+                .deviceName(entity.getDevice() != null ? entity.getDevice().getName() : null)
+                .deviceCategoryId(entity.getDevice() != null && entity.getDevice().getCategory() != null ? entity.getDevice().getCategory().getId() : null)
+                .deviceCategoryName(entity.getDevice() != null && entity.getDevice().getCategory() != null ? entity.getDevice().getCategory().getName() : null)
                 .coverageRequirement(entity.getCoverageRequirement())
                 .gostReference(entity.getGostReference())
-                .createdAt(entity.getCreatedAt())
-                .updatedAt(entity.getUpdatedAt())
                 .build();
     }
 
@@ -79,18 +81,20 @@ public class FaultMapper {
             dto.setFaultTypeName(entity.getFaultType().getName());
             dto.setFaultTypeDescription(entity.getFaultType().getDescription());
             dto.setCoverageRequirement(entity.getFaultType().getCoverageRequirement().name());
-            
+
             // Set device category name if available
             if (entity.getFaultType().getDeviceCategory() != null) {
                 dto.setDeviceCategoryName(entity.getFaultType().getDeviceCategory().getName());
+            }
+            // Set device category name if available
+            if (entity.getFaultType().getDevice() != null && entity.getFaultType().getDevice().getCategory() != null) {
+                dto.setDeviceCategoryName(entity.getFaultType().getDevice().getCategory().getName());
             }
         }
         
         dto.setCovered(entity.isCovered());
         dto.setCoveredMethodsIds(entity.getCoveredMethodsIds());
         dto.setNotes(entity.getNotes());
-        dto.setCreatedAt(entity.getCreatedAt());
-        dto.setUpdatedAt(entity.getUpdatedAt());
         
         // Parse covered methods IDs if present
         if (entity.getCoveredMethodsIds() != null && !entity.getCoveredMethodsIds().isEmpty()) {
@@ -129,7 +133,6 @@ public class FaultMapper {
                 .faultTypeCode(entity.getFaultType() != null ? entity.getFaultType().getCode() : null)
                 .faultTypeName(entity.getFaultType() != null ? entity.getFaultType().getName() : null)
                 .effectiveness(entity.getEffectiveness())
-                .createdAt(entity.getCreatedAt())
                 .build();
     }
 

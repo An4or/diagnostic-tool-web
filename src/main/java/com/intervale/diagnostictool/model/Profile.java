@@ -4,12 +4,10 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 
-import java.time.LocalDateTime;
 import java.util.*;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.stream.Collectors;
 
 @Getter
@@ -71,14 +69,6 @@ public class Profile {
     @Column(name = "is_compliant")
     private Boolean isCompliant = false; // Соответствует ли профиль требованиям SIL
     
-    @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
-    
-    @UpdateTimestamp
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
-    
     public Profile() {}
     
     public Profile(String name, String description) {
@@ -131,16 +121,16 @@ public class Profile {
         // Calculate total coverage using the formula: 1 - ∏(1 - DC_i)
         double product = 1.0;
         for (ProfileDiagnosticMethod pdm : deviceDiagnosticMethods) {
-            if (pdm.getDiagnosticMethod() != null && 
-                pdm.getDiagnosticMethod().getDiagnosticCoverage() != null) {
-                
-                double coverage = pdm.getDiagnosticMethod().getDiagnosticCoverage().doubleValue() / 100.0;
+            if (pdm.getDiagnosticMethod() != null &&
+                pdm.getDiagnosticMethod().getCoveragePercent() != null) {
+
+                double coverage = pdm.getDiagnosticMethod().getCoveragePercent().doubleValue() / 100.0;
                 product *= (1.0 - coverage);
             }
         }
         
         double totalCoverage = (1.0 - product) * 100.0;
-        this.totalDiagnosticCoverage = BigDecimal.valueOf(totalCoverage).setScale(2, BigDecimal.ROUND_HALF_UP);
+        this.totalDiagnosticCoverage = BigDecimal.valueOf(totalCoverage).setScale(2, RoundingMode.HALF_UP);
         
         // Check if coverage meets requirements for the architecture
         updateCompliance();
