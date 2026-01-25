@@ -24,6 +24,7 @@ public class DiagnosticMethodDto {
     
     // Additional fields for UI
     private Long deviceCategoryId;
+    private Long deviceId;
     private String deviceCategoryName;
     private Integer coveragePercentage;
 }

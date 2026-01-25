@@ -40,6 +40,11 @@ public class DiagnosticMethodService {
     public List<DiagnosticMethod> findByCategoryId(Long categoryId) {
         return diagnosticMethodRepository.findByDeviceCategoryId(categoryId);
     }
+
+    @Transactional(readOnly = true)
+    public List<DiagnosticMethod> findByDeviceId(Long deviceId) {
+        return diagnosticMethodRepository.findByDeviceId(deviceId);
+    }
     
     /**
      * Find all diagnostic methods suitable for a specific device and architecture.
@@ -55,8 +60,9 @@ public class DiagnosticMethodService {
         }
         
         // Get all methods for the device
-        Set<DiagnosticMethod> deviceMethods = device.getDiagnosticMethods();
-        
+//        Set<DiagnosticMethod> deviceMethods = device.getDiagnosticMethods();
+        List <DiagnosticMethod> deviceMethods = diagnosticMethodRepository.findByDeviceId(device.getId());
+
         // Get all methods for the device's category
         List<DiagnosticMethod> categoryMethods = diagnosticMethodRepository
                 .findByDeviceCategory(device.getCategory());
@@ -64,7 +70,7 @@ public class DiagnosticMethodService {
         // Combine both lists and get distinct methods
         Set<DiagnosticMethod> allMethods = new HashSet<>();
         allMethods.addAll(deviceMethods);
-        allMethods.addAll(categoryMethods);
+//        allMethods.addAll(categoryMethods);
         
         // Filter methods by architecture suitability and sort by coverage percentage
         return allMethods.stream()

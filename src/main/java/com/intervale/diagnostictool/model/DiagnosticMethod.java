@@ -70,6 +70,11 @@ public class DiagnosticMethod {
     @JsonIgnore
     private DeviceCategory deviceCategory;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "device_id", nullable = false)
+    @JsonIgnore
+    private Device device;
+
     @Column(nullable = false)
     private String name;
 

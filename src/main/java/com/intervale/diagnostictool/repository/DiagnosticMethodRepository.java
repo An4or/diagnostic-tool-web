@@ -1,5 +1,6 @@
 package com.intervale.diagnostictool.repository;
 
+import com.intervale.diagnostictool.model.Device;
 import com.intervale.diagnostictool.model.DeviceCategory;
 import com.intervale.diagnostictool.model.DiagnosticMethod;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -13,6 +14,9 @@ import java.util.List;
 public interface DiagnosticMethodRepository extends JpaRepository<DiagnosticMethod, Long> {
     List<DiagnosticMethod> findByDeviceCategory(DeviceCategory category);
     List<DiagnosticMethod> findByDeviceCategoryId(Long categoryId);
+
+    List<DiagnosticMethod> findByDevice(Device device);
+    List<DiagnosticMethod> findByDeviceId(Long deviceId);
     boolean existsByNameAndDeviceCategory(String name, DeviceCategory category);
     
     @Query("SELECT COUNT(dm) FROM DiagnosticMethod dm WHERE dm.deviceCategory = :category")

@@ -8,6 +8,28 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
     <style>
         /* Base styles */
+        /* Уменьшаем шрифт в таблице модального окна */
+        #coverageLevelsModal .modal-body {
+            font-size: 0.8rem; /* Уменьшенный размер текста */
+        }
+
+        #coverageLevelsModal .table td,
+        #coverageLevelsModal .table th {
+            padding: 0.4rem; /* Более компактные отступы */
+        }
+
+        /* Убираем оформление ссылок в колонке категорий */
+        .category-cell {
+            cursor: default !important;
+            color: inherit !important;
+            text-decoration: none !important;
+        }
+
+        .category-cell:hover {
+            color: inherit !important;
+            text-decoration: none !important;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             font-size: 0.9375rem;
@@ -291,6 +313,12 @@
                 <i class="bi bi-pencil-square me-1"></i> Редактировать профиль
             </a>
         </div>
+        <button type="button"
+                class="btn btn-primary rounded-circle shadow"
+                id="openCoverageModalBtn"
+                style="position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; z-index: 1050;">
+            <i class="bi bi-info-circle" style="font-size: 1.5rem;"></i>
+        </button>
     </div>
 
     <div class="card">
@@ -330,9 +358,11 @@
                         </thead>
                         <tbody>
                         <tr th:each="device : ${profile.devices}">
-                            <td class="category-cell" style="cursor: pointer; color: #0d6efd; text-decoration: underline;"
+                            <td class="category-cell"
                                 th:text="${device.category?.name ?: 'N/A'}"
-                                th:data-category-name="${device.category?.name ?: 'N/A'}">Category</td>
+                                th:data-category-name="${device.category?.name ?: 'N/A'}">
+                            </td>
+
                             <td th:text="${device.name}">Device Name</td>
                             <td style="min-width: 400px;">
                                 <div class="faults-container">
@@ -1477,13 +1507,16 @@
                     if (indicator) {
                         switch(level) {
                             case 'LOW':
-                                indicator.style.backgroundColor = '#ffcccc';
+                                indicator.style.backgroundColor = '#add8e6';
+                                indicator.style.borderLeft = '3px solid #007bff';
                                 break;
                             case 'MEDIUM':
-                                indicator.style.backgroundColor = '#fff3cd';
+                                indicator.style.backgroundColor = '#d4edda';
+                                indicator.style.borderLeft = '3px solid #006400';
                                 break;
                             case 'HIGH':
-                                indicator.style.backgroundColor = '#d4edda';
+                                indicator.style.backgroundColor = '#f8d7da';
+                                indicator.style.borderLeft = '3px solid #800000';
                                 break;
                             default:
                                 indicator.style.backgroundColor = '#f8f9fa';
@@ -1948,8 +1981,7 @@
             });
 
             // Обработчик клика на категорию для открытия модального окна
-            $(document).on('click', '.category-cell', function() {
-                const categoryName = $(this).data('category-name') || $(this).text().trim();
+            $(document).on('click', '#openCoverageModalBtn', function() {
                 const modal = new bootstrap.Modal(document.getElementById('coverageLevelsModal'));
                 modal.show();
             });
