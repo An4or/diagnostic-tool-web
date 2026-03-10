@@ -1,0 +1,1728 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      layout:decorate="~{layouts/base}"
+      th:with="title='View Profile'">
+<head>
+    <title>View Profile</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <!-- Page-specific CSS -->
+    <link rel="stylesheet" th:href="@{/css/profile-view.css}">
+</head>
+<body>
+<div layout:fragment="content">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="bi bi-person-lines-fill me-2"></i>Детали профиля</h1>
+        <div>
+            <a th:href="@{/profiles}" class="btn btn-outline-secondary me-2">
+                <i class="bi bi-arrow-left me-1"></i> Вернуться к списку
+            </a>
+            <a th:href="@{/profiles/{id}/edit(id=${profile.id})}" class="btn btn-primary">
+                <i class="bi bi-pencil-square me-1"></i> Редактировать профиль
+            </a>
+        </div>
+        <button type="button"
+                class="btn btn-primary rounded-circle shadow"
+                id="openCoverageModalBtn"
+                style="position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; z-index: 1050;">
+            <i class="bi bi-info-circle" style="font-size: 1.5rem;"></i>
+        </button>
+    </div>
+
+    <div class="card">
+        <div class="card-header bg-light">
+            <h5 class="mb-0" th:text="${profile.name}">Название профиля</h5>
+        </div>
+        <div class="card-body">
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <h6>Описание</h6>
+                    <p class="text-muted" th:if="${profile.description == null || profile.description.isEmpty()}">
+                        No description provided
+                    </p>
+                    <p th:if="${profile.description != null && !profile.description.isEmpty()}"
+                       th:text="${profile.description}"></p>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <h6>Устройства и диагностические методы</h6>
+                <div th:if="${profile.devices.isEmpty()}" class="alert alert-info">
+                    No devices added to this profile.
+                </div>
+                <div th:if="!${profile.devices.isEmpty()}" class="table-responsive">
+                    <table id="devicesTable" class="table table-hover" style="width:100%">
+                        <colgroup>
+                            <col style="width: 20%">
+                            <col style="width: 20%">
+                            <col style="width: 60%">
+                        </colgroup>
+                        <thead class="table-light">
+                        <tr>
+                            <th class="sortable" data-sort="category">Категория</th>
+                            <th class="sortable" data-sort="device">Устройства</th>
+                            <th>Типы неисправностей и диагностические методы</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="device : ${profile.devices}">
+                            <td class="category-cell"
+                                th:text="${device.category?.name ?: 'N/A'}"
+                                th:data-category-name="${device.category?.name ?: 'N/A'}">
+                            </td>
+
+                            <td th:text="${device.name}">Device Name</td>
+                            <td style="min-width: 400px;">
+                                <div class="faults-container">
+                                    <th:block th:each="deviceWithFaults : ${devicesWithFaults}" th:if="${deviceWithFaults.device.id == device.id}">
+                                        <div th:each="fault : ${deviceWithFaults.faults}"
+                                             th:class="'fault-item coverage-' + ${fault.faultType.coverageRequirement}"
+                                             th:data-coverage-level="${fault.faultType.coverageRequirement}"
+                                             th:data-coverage-percent="0">
+                                            <div class="name-part">
+                                                <label class="method-label mb-0">
+                                                    <span th:text="${fault.faultType.name + ' (' + fault.faultType.coverageRequirement + ')'}"></span>
+                                                </label>
+                                            </div>
+                                            <div class="diagnostics-part">
+                                                <select class="form-select form-select-sm diagnostic-method-select"
+                                                        th:data-fault-id="${fault.faultType.id}"
+                                                        th:data-device-id="${device.id}">
+                                                    <option value="">Выберите метод диагностики</option>
+                                                    <th:block th:each="method : ${deviceWithFaults.diagnosticMethods}">
+                                                        <option th:value="${method.id}"
+                                                                th:text="${method.name + ' (' + method.coverageLevel + ')'}">
+                                                        </option>
+                                                    </th:block>
+                                                </select>
+                                                <div class="mt-2 d-flex align-items-center">
+                                                    <small class="text-muted me-2">Покрытие:</small>
+                                                    <div class="input-group input-group-sm" style="width: 120px;">
+                                                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="adjustPercentage(this, -1)">-</button>
+                                                        <input type="number" class="form-control form-control-sm text-center coverage-percent"
+                                                               th:data-fault-id="${fault.faultType.id}"
+                                                               th:data-device-id="${device.id}"
+                                                               value="0"
+                                                               min="0" max="100" step="1"
+                                                               readonly
+                                                               style="-moz-appearance: textfield;">
+                                                        <span class="input-group-text">%</span>
+                                                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="adjustPercentage(this, 1)">+</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div th:if="${deviceWithFaults.faults == null || deviceWithFaults.faults.isEmpty()}"
+                                             class="text-muted">
+                                            Нет неисправностей
+                                        </div>
+                                    </th:block>
+                                </div>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Таблица расчета неисправностей -->
+            <div class="card mt-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Таблица расчета неисправностей</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead class="table-light">
+                            <tr>
+                                <th>Устройства</th>
+                                <th>S</th>
+                                <th>D</th>
+                                <th>DC<sub>COMP</sub></th>
+                                <th>λ</th>
+                                <th>λ<sub>S</sub></th>
+                                <th>λ<sub>D</sub></th>
+                                <th>λ<sub>DD</sub>+λ<sub>DU</sub></th>
+                                <th>λ<sub>S</sub>+λ<sub>DD</sub></th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="device : ${profile.devices}" th:data-device-id="${device.id}">
+                                <td th:text="${device.name}"></td>
+                                <td class="s-value-cell">
+                                    <div class="input-group input-group-sm" style="width: 100px;">
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="adjustSValue(this, -1)">-</button>
+                                        <input type="number" class="form-control form-control-sm text-center s-value"
+                                               value="0.5" min="0" max="1" step="0.1"
+                                               style="width: 50px; -moz-appearance: textfield;">
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="adjustSValue(this, 1)">+</button>
+                                    </div>
+                                </td>
+                                <td class="d-value-cell">
+                                    <input type="number" class="form-control form-control-sm text-center d-value"
+                                           value="0.5" readonly style="width: 80px;">
+                                </td>
+                                <td class="dc-comp-cell">0</td>
+                                <td>
+                                    <input type="number" class="form-control form-control-sm text-center lambda-value"
+                                           value="10" min="0" step="0.1"
+                                           style="width: 80px; -moz-appearance: textfield;">
+                                </td>
+                                <td class="calculated" data-formula="s*lambda"></td>
+                                <td class="calculated" data-formula="d*lambda"></td>
+                                <td class="calculated" data-formula="lambda_dd_du">0</td>
+                                <td class="calculated" data-formula="lambda_s_plus_lambda_dd">-</td>
+                            </tr>
+                            <tr>
+                                <td colspan="9" class="small text-muted" id="upb-summary">
+                                    УПБ = -- (формула не рассчитана)
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Таблица определения УПБ (Уровня полноты безопасности) -->
+            <div class="card mt-4">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Таблица определения УПБ (Уровня полноты безопасности)</h5>
+                    <div class="d-flex align-items-center">
+                        <label class="mb-0 me-2">Тип архитектуры:</label>
+                        <select class="form-select form-select-sm" id="architectureType" style="width: auto;">
+                            <option value="">Выберите тип архитектуры</option>
+                            <option th:each="type : ${T(com.intervale.diagnostictool.model.Device.ArchitectureType).values()}"
+                                    th:value="${type}"
+                                    th:text="${@architectureTypeFormatter.format(type)}"
+                                    th:selected="${profile.architectureType == type}">
+                            </option>
+                        </select>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-sm safety-table">
+                            <thead class="table-light">
+                            <tr>
+                                <th rowspan="2" class="align-middle">Доля безопасных отказов элемента</th>
+                                <th colspan="3" class="text-center">Отказоустойчивость аппаратных средств</th>
+                            </tr>
+                            <tr>
+                                <th>N = 0</th>
+                                <th>N = 1</th>
+                                <th>N = 2</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr>
+                                <td>менее 60%</td>
+                                <td> - </td>
+                                <td>УПБ 1</td>
+                                <td>УПБ 2</td>
+                            </tr>
+                            <tr>
+                                <td>от 60% до менее 90%</td>
+                                <td>УПБ 1</td>
+                                <td>УПБ 2</td>
+                                <td>УПБ 3</td>
+                            </tr>
+                            <tr>
+                                <td>от 90% до менее 99%</td>
+                                <td>УПБ 2</td>
+                                <td>УПБ 3</td>
+                                <td>УПБ 4</td>
+                            </tr>
+                            <tr>
+                                <td>более и равно 99%</td>
+                                <td>УПБ 2</td>
+                                <td>УПБ 4</td>
+                                <td>УПБ 4</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <!-- CSRF Token and Profile ID -->
+                            <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" id="csrfToken" />
+                            <input type="hidden" th:unless="${_csrf != null}" name="_csrf" value="" id="csrfToken" />
+                            <input type="hidden" id="profileId" th:value="${profile.id}" />
+                            <h5 class="card-title">Информация профиля</h5>
+                            <dl class="row">
+                                <dt class="col-sm-3">ID</dt>
+                                <dd class="col-sm-9" th:text="${profile.id}">-</dd>
+
+                                <!-- createdAt/updatedAt removed from schema -->
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        <div class="card-footer text-end">
+            <a th:href="@{/profiles}" class="btn btn-outline-secondary me-2">
+                <i class="bi bi-arrow-left me-1"></i> Вернуться к списку
+            </a>
+            <a th:href="@{/profiles/{id}/edit(id=${profile.id})}" class="btn btn-primary">
+                <i class="bi bi-pencil-square me-1"></i> Редактировать профиль
+            </a>
+        </div>
+    </div>
+
+    <!-- Модальное окно с таблицей уровней охвата диагностикой -->
+    <div class="modal fade" id="coverageLevelsModal" tabindex="-1" aria-labelledby="coverageLevelsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="coverageLevelsModalLabel">Уровни и диапазоны охвата диагностикой различных подсистем (компонентов)</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-sm">
+                            <thead class="table-light">
+                            <tr>
+                                <th style="width: 30%;">Компонент</th>
+                                <th style="width: 23%;">Низкий охват диагностикой</th>
+                                <th style="width: 23%;">Средний охват диагностикой</th>
+                                <th style="width: 24%;">Высокий охват диагностикой</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <!-- Процессор -->
+                            <tr>
+                                <td><strong>Процессор:</strong></td>
+                                <td>в сумме менее 70 %</td>
+                                <td>в сумме менее 90 %</td>
+                                <td>-</td>
+                            </tr>
+                            <tr>
+                                <td>- регистр</td>
+                                <td>50 %-70 %</td>
+                                <td>85 %-90 %</td>
+                                <td>99 %-99,99 %</td>
+                            </tr>
+                            <tr>
+                                <td>- внутренняя регистровая память</td>
+                                <td>50 %- 60 %</td>
+                                <td>75 %-95 %</td>
+                                <td>-</td>
+                            </tr>
+                            <tr>
+                                <td>- блок кодирования и выполнения, включающий регистр тэгов</td>
+                                <td>50 %-70 %</td>
+                                <td>85 %-98 %</td>
+                                <td>-</td>
+                            </tr>
+                            <tr>
+                                <td>- устройство вычисления адреса</td>
+                                <td>50 %-60 %</td>
+                                <td>60 %-90 %</td>
+                                <td>85 %-98 %</td>
+                            </tr>
+                            <tr>
+                                <td>- счетчик команд</td>
+                                <td>50 %-70 %</td>
+                                <td>-</td>
+                                <td>-</td>
+                            </tr>
+                            <tr>
+                                <td>- указатель стека</td>
+                                <td>40 %-60 %</td>
+                                <td>-</td>
+                                <td>-</td>
+                            </tr>
+                            <!-- Шина -->
+                            <tr>
+                                <td><strong>Шина:</strong></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td>- модуль управления памятью</td>
+                                <td>50 %</td>
+                                <td>70 %</td>
+                                <td>90 %-99%</td>
+                            </tr>
+                            <tr>
+                                <td>- устройство управления шины</td>
+                                <td>50 %</td>
+                                <td>70 %</td>
+                                <td>90 %-99%</td>
+                            </tr>
+                            <!-- Обработка прерываний -->
+                            <tr>
+                                <td><strong>Обработка прерываний</strong></td>
+                                <td>40 %-60%</td>
+                                <td>60 %-90 %</td>
+                                <td>85 %-98 %</td>
+                            </tr>
+                            <!-- Кварцевый тактовый генератор -->
+                            <tr>
+                                <td><strong>Кварцевый тактовый генератор</strong></td>
+                                <td>50 %</td>
+                                <td>-</td>
+                                <td>95 %-99 %</td>
+                            </tr>
+                            <!-- Контроль выполнения программы -->
+                            <tr>
+                                <td><strong>Контроль выполнения программы:</strong></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td>- временное</td>
+                                <td>40 %-60%</td>
+                                <td>60 % -80 %</td>
+                                <td>-</td>
+                            </tr>
+                            <tr>
+                                <td>- логическое</td>
+                                <td>40 %-60%</td>
+                                <td>60 % - 90 %</td>
+                                <td>-</td>
+                            </tr>
+                            <tr>
+                                <td>- временное и логическое</td>
+                                <td>-</td>
+                                <td>65 % - 90 %</td>
+                                <td>90 % - 98 %</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Постоянная память</strong></td>
+                                <td>50 %-70 %</td>
+                                <td>99%</td>
+                                <td>99,99 %</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Непостоянная память</strong></td>
+                                <td>50 %-70 %</td>
+                                <td>85 %-90 %</td>
+                                <td>99 %-99,99 %</td>
+                            </tr>
+                            <!-- Дискретное оборудование -->
+                            <tr>
+                                <td><strong>Дискретное оборудование:</strong></td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td>- цифровой ввод/вывод</td>
+                                <td>70 %</td>
+                                <td>90 %</td>
+                                <td>99 %</td>
+                            </tr>
+                            <tr>
+                                <td>- аналоговый ввод/вывод</td>
+                                <td>50 %-60 %</td>
+                                <td>70 %-85 %</td>
+                                <td>99 %</td>
+                            </tr>
+                            <tr>
+                                <td>- источник питания</td>
+                                <td>50 %-60 %</td>
+                                <td>70 %-85 %</td>
+                                <td>99 %</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Устройство связи и запоминающее устройство большой емкости</strong></td>
+                                <td>90 %</td>
+                                <td>99,9 %</td>
+                                <td>99,99 %</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Электромеханические устройства</strong></td>
+                                <td>90 %</td>
+                                <td>99 %</td>
+                                <td>99,9 %</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Датчики</strong></td>
+                                <td>50 %-70 %</td>
+                                <td>70 %- 85 %</td>
+                                <td>99 %</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Оконечные элементы</strong></td>
+                                <td>50 %-70 %</td>
+                                <td>70 %- 85 %</td>
+                                <td>99 %</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Подключаем необходимые скрипты -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap-select@1.14.0-beta2/dist/js/bootstrap-select.min.js"></script>
+
+    <th:block layout:fragment="scripts">
+        <script th:inline="javascript">
+            //<![CDATA[
+            let isUpdatingDCCOMP = false;
+            let lastUpdateTime = 0;
+            const UPDATE_DEBOUNCE_TIME = 500;
+
+            // Flags to prevent infinite loops
+            let isUpdatingCoverage = false;
+            let isLoadingCoverage = false;
+
+            // Cache for coverage data to prevent repeated requests
+            const coverageCache = new Map();
+
+            // Function to get cache key
+            function getCoverageCacheKey(profileId, deviceId, faultId, methodId) {
+                return `${profileId}_${deviceId}_${faultId}_${methodId}`;
+            }
+
+            // Load saved diagnostic methods for all faults
+            function loadSavedMethods() {
+                const profileId = getProfileIdFromUrl();
+                if (!profileId) return Promise.resolve();
+
+                // Load both faults and coverage percentages in parallel
+                return $.when(
+                    $.ajax({
+                        url: `/api/profiles/${profileId}/faults`,
+                        method: 'GET'
+                    }),
+                    $.ajax({
+                        url: `/api/profiles/${profileId}/faults/coverage-percentages`,
+                        method: 'GET'
+                    })
+                ).done(function(faultsResponse, coverageResponse) {
+                    const faults = faultsResponse[0];
+                    const coveragePercentages = coverageResponse[0];
+
+                    console.log('Loaded saved faults:', faults);
+                    console.log('Loaded coverage percentages:', coveragePercentages);
+
+                    // For each saved fault, restore the selected method in the dropdown
+                    faults.forEach(fault => {
+                        if (fault.coveredMethodsIds) {
+                            try {
+                                // Parse the JSON to get the coverage data
+                                const coverageData = JSON.parse(fault.coveredMethodsIds);
+                                console.log('Parsed coverage data for fault', fault.faultTypeId, ':', coverageData);
+
+                                // coverageData is { deviceId: { methodId: coveragePercent } }
+                                for (const [deviceIdStr, methodData] of Object.entries(coverageData)) {
+                                    const deviceId = parseInt(deviceIdStr);
+                                    for (const [methodIdStr, defaultCoveragePercent] of Object.entries(methodData)) {
+                                        const methodId = parseInt(methodIdStr);
+                                        // Find the select dropdown for this fault and device
+                                        const $select = $(`.diagnostic-method-select[data-fault-id="${fault.faultTypeId}"][data-device-id="${deviceId}"]`);
+                                        if ($select.length) {
+// Set the selected method (only if methodId is valid)
+                                            if (methodId && methodId !== '' && methodId !== '0') {
+                                                $select.val(methodId);
+                                                console.log(`Restored method ${methodId} for fault ${fault.faultTypeId} on device ${deviceId}`);
+                                            } else {
+                                                // For default "Select method" option
+                                                $select.val('');
+                                                console.log(`No method selected for fault ${fault.faultTypeId} on device ${deviceId}`);
+
+                                                // Set coverage to 0 for default selection
+                                                const $coverageInput = $select.closest('.fault-item').find('.coverage-percent');
+                                                isUpdatingCoverage = true;
+                                                $coverageInput.val(0);
+                                                isUpdatingCoverage = false;
+
+                                                // Skip to next iteration as we don't need to process coverage for unselected methods
+                                                continue;
+                                            }
+
+                                            // Trigger change event to update the display
+                                            $select.trigger('change');
+
+                                            // Get the coverage percentage from the saved data
+                                            const cacheKey = getCoverageCacheKey(profileId, deviceId, fault.faultTypeId, methodId);
+                                            let coverageValue = parseInt(defaultCoveragePercent);
+
+                                            // If the value is not a valid number, try to get the default from the method
+                                            if (isNaN(coverageValue)) {
+                                                const $option = $select.find(`option[value="${methodId}"]`);
+                                                if ($option.length) {
+                                                    const coverageMatch = $option.text().match(/\((LOW|MEDIUM|HIGH)\)/);
+                                                    if (coverageMatch) {
+                                                        const coverageLevel = coverageMatch[1];
+                                                        switch(coverageLevel) {
+                                                            case 'LOW': coverageValue = 60; break;
+                                                            case 'MEDIUM': coverageValue = 90; break;
+                                                            case 'HIGH': coverageValue = 99; break;
+                                                            default: coverageValue = 60;
+                                                        }
+                                                    } else {
+                                                        coverageValue = 60; // Default value if no coverage level found
+                                                    }
+                                                }
+                                            }
+
+                                            // Update the coverage input field
+                                            const $coverageInput = $select.closest('.fault-item').find('.coverage-percent');
+                                            isUpdatingCoverage = true;
+                                            $coverageInput.val(coverageValue);
+                                            isUpdatingCoverage = false;
+
+                                            // Cache the coverage value
+                                            coverageCache.set(cacheKey, coverageValue);
+                                            console.log(`Cached coverage for ${cacheKey} = ${coverageValue}`);
+                                        }
+                                    }
+                                }
+                            } catch (e) {
+                                console.warn('Error parsing covered methods for fault', fault.faultTypeId, ':', e);
+                            }
+                        }
+                    });
+                }).fail(function(error) {
+                    console.error('Error loading saved methods or coverage percentages:', error);
+                });
+            }
+
+            // Global function to initialize coverage
+            window.initializeCoverage = function() {
+                try {
+                    console.log('Initializing coverage...');
+
+                    // Initialize all coverage inputs
+                    const profileId = getProfileIdFromUrl();
+
+                    // Load all saved coverage percentages from backend
+                    if (profileId) {
+                        $.ajax({
+                            url: `/api/profiles/${profileId}/faults/coverage-percentages`,
+                            method: 'GET',
+                            success: function(response) {
+                                console.log('Loaded all coverage percentages:', response);
+
+                                // Populate cache with all saved percentages
+                                for (const [key, value] of Object.entries(response)) {
+                                    if (value !== null && value !== undefined) {
+                                        coverageCache.set(key, value);
+                                        console.log(`Cached coverage: ${key} = ${value}`);
+                                    }
+                                }
+
+                                // Now initialize all coverage inputs with cached values
+                                initializeCoverageInputs();
+                            },
+                            error: function(xhr, status, error) {
+                                console.error('Error loading coverage percentages:', {status, error, response: xhr.responseText});
+                                // Continue with initialization even if loading fails
+                                initializeCoverageInputs();
+                            }
+                        });
+                    } else {
+                        initializeCoverageInputs();
+                    }
+                } catch (e) {
+                    console.error('Error initializing coverage:', e);
+                }
+            };
+
+            // Function to initialize coverage inputs
+            function initializeCoverageInputs() {
+                const profileId = getProfileIdFromUrl();
+
+                $('.diagnostic-method-select').each(function() {
+                    const $select = $(this);
+                    const selectedOption = $select.find('option:selected');
+                    const $coverageInput = $select.closest('.fault-item').find('.coverage-percent');
+                    const faultId = $select.data('fault-id');
+                    const deviceId = $select.data('device-id');
+                    const methodId = selectedOption.val();
+
+                    if (selectedOption.val()) {
+                        const coverageMatch = selectedOption.text().match(/\((LOW|MEDIUM|HIGH)\)/);
+                        let defaultCoverageValue = 0;
+
+                        if (coverageMatch) {
+                            const coverageLevel = coverageMatch[1];
+                            switch(coverageLevel) {
+                                case 'LOW': defaultCoverageValue = 60; break;
+                                case 'MEDIUM': defaultCoverageValue = 90; break;
+                                case 'HIGH': defaultCoverageValue = 99; break;
+                            }
+                        }
+
+                        // Try to load saved coverage from cache (loaded from backend on page load)
+                        if (profileId && faultId && deviceId && methodId) {
+                            const cacheKey = getCoverageCacheKey(profileId, deviceId, faultId, methodId);
+
+                            console.log('Initializing coverage for:', {profileId, deviceId, faultId, methodId, cacheKey});
+
+                            // Check cache first (should be populated from backend on page load)
+                            if (coverageCache.has(cacheKey)) {
+                                const cachedCoverage = coverageCache.get(cacheKey);
+                                isUpdatingCoverage = true;
+                                $coverageInput.val(cachedCoverage !== null && cachedCoverage !== undefined ? cachedCoverage : defaultCoverageValue);
+                                isUpdatingCoverage = false;
+                                $coverageInput.closest('.input-group').find('button').prop('disabled', false);
+                                console.log('Using cached coverage on init:', cachedCoverage);
+                            } else {
+                                // If not in cache, use default value (cache should have been loaded on page load)
+                                isUpdatingCoverage = true;
+                                $coverageInput.val(defaultCoverageValue);
+                                isUpdatingCoverage = false;
+                                $coverageInput.closest('.input-group').find('button').prop('disabled', false);
+                                console.log('No cached coverage found, using default:', defaultCoverageValue);
+                            }
+                        }
+                    } else {
+                        $coverageInput.val('0');
+                    }
+                });
+
+                // Initial DCCOMP calculation
+                if (window.updateDCCOMP) {
+                    window.updateDCCOMP(true);
+                }
+
+                console.log('Coverage inputs initialization complete');
+            }
+
+            // Update DCCOMP function
+            window.updateDCCOMP = function(force = false) {
+                const now = Date.now();
+
+                if ((isUpdatingDCCOMP || (now - lastUpdateTime < UPDATE_DEBOUNCE_TIME)) && !force) {
+                    console.log('Skipping DCCOMP update: update in progress or too soon');
+                    return;
+                }
+
+                isUpdatingDCCOMP = true;
+                lastUpdateTime = now;
+
+                console.group('=== DCCOMP Update Start ===');
+                console.log('Force update:', force);
+
+                try {
+                    console.log('Updating DCCOMP values...');
+
+                    let updatesMade = false;
+
+                    const $deviceTable = $('#devicesTable');
+                    const $deviceRows = $deviceTable.find('> tbody > tr');
+
+                    $deviceRows.each(function(index) {
+                        const $deviceRow = $(this);
+                        const deviceName = $deviceRow.find('td:eq(1)').text().trim();
+                        console.group(`Device ${index + 1}: "${deviceName}"`);
+
+                        const $calcTable = $('table:has(.dc-comp-cell)');
+                        const $allCalcRows = $calcTable.find('tbody tr');
+
+                        let $calcRow = $allCalcRows.filter(function() {
+                            const $row = $(this);
+                            const rowText = $row.text().trim();
+
+                            const hasMatchingCell = $row.find('td').filter((i, td) =>
+                                $(td).text().trim() === deviceName
+                            ).length > 0;
+
+                            return hasMatchingCell;
+                        });
+
+                        if ($calcRow.length === 0) {
+                            $calcRow = $allCalcRows.filter((i, row) =>
+                                $(row).text().includes(deviceName)
+                            );
+                        }
+
+                        console.log('Matching calculation rows found:', $calcRow.length);
+                        if ($calcRow.length === 0) {
+                            console.warn('No calculation row found for device:', deviceName);
+                            console.groupEnd();
+                            return;
+                        }
+
+                        const $dcCompCell = $calcRow.find('.dc-comp-cell');
+
+                        const $methodSelects = $deviceRow.find('.diagnostic-method-select');
+                        console.log(`Found ${$methodSelects.length} method selects for device`);
+
+                        let totalCoverage = 0;
+                        let selectedMethodsCount = 0;
+
+                        $methodSelects.each(function(index) {
+                            const $select = $(this);
+                            const selectedOption = $select.find('option:selected');
+
+                            if (selectedOption.val()) {
+                                const $faultItem = $select.closest('.fault-item');
+                                const $coverageInput = $faultItem.find('.coverage-percent');
+                                const coverage = parseInt($coverageInput.val()) || 0;
+
+                                console.group(`Method ${index + 1}:`);
+                                console.log('Selected option:', selectedOption.text());
+                                console.log('Coverage input value:', $coverageInput.val());
+                                console.log('Parsed coverage:', coverage);
+
+                                if (coverage > 0) {
+                                    console.log('Adding to total coverage');
+                                    totalCoverage += coverage;
+                                    selectedMethodsCount++;
+                                } else {
+                                    console.log('Skipping - coverage is 0 or invalid');
+                                }
+
+                                console.groupEnd();
+                            } else {
+                                console.log(`Method ${index + 1}: No method selected`);
+                            }
+                        });
+
+                        console.log(`Total coverage: ${totalCoverage}, Selected methods: ${selectedMethodsCount}`);
+
+                        const averageCoverage = selectedMethodsCount > 0
+                            ? Math.round((totalCoverage / selectedMethodsCount) * 10) / 10
+                            : 0;
+
+                        const currentValue = parseFloat($dcCompCell.text()) || 0;
+                        const needsUpdate = Math.abs(currentValue - averageCoverage) > 0.1;
+
+                        console.log(`Current DCCOMP: ${currentValue}%, New value: ${averageCoverage}%`);
+                        console.log('Needs update:', needsUpdate);
+
+                        if (needsUpdate || force) {
+                            console.log(`Updating DCCOMP: ${currentValue}% -> ${averageCoverage}%`);
+                            $dcCompCell.text(averageCoverage);
+                            updatesMade = true;
+
+                            if (window.updateLambdaCalculations) {
+                                console.log('Updating lambda calculations...');
+                                updateLambdaCalculations($calcRow[0], undefined, undefined, undefined, true);
+                            }
+                        } else {
+                            console.log('No update needed - value unchanged or change too small');
+                        }
+
+                        console.groupEnd();
+                    });
+
+                    if (updatesMade) {
+                        console.log('DCCOMP update complete with changes');
+                    } else {
+                        console.log('DCCOMP update complete (no changes)');
+                    }
+
+                    // Добавляем вызов для пересчёта УПБ после обновления DC (если архитектура выбрана)
+                    if (window.calculateSafetyIntegrity) {
+                        calculateSafetyIntegrity();
+                    }
+
+                    console.groupEnd();
+                } catch (e) {
+                    console.error('Error in updateDCCOMP:', e);
+                } finally {
+                    setTimeout(() => {
+                        isUpdatingDCCOMP = false;
+                    }, 50);
+                }
+            };
+
+            window.updateCoverageDisplay = function(select, skipLoad) {
+                // Prevent infinite loops
+                if (isUpdatingCoverage || isLoadingCoverage) {
+                    console.log('Skipping updateCoverageDisplay - already updating');
+                    return;
+                }
+
+                const $select = $(select);
+                const $coverageInput = $select.closest('.fault-item').find('.coverage-percent');
+                const selectedOption = $select.find('option:selected');
+                const faultId = $select.data('fault-id');
+                const deviceId = $select.data('device-id');
+                const methodId = selectedOption.val();
+                const profileId = getProfileIdFromUrl();
+
+                console.log('Updating coverage display for method:', selectedOption.text(), 'skipLoad:', skipLoad);
+
+                if (selectedOption.val()) {
+                    const coverageMatch = selectedOption.text().match(/\((LOW|MEDIUM|HIGH)\)/);
+                    let defaultCoverageValue = 0;
+
+                    if (coverageMatch) {
+                        const coverageLevel = coverageMatch[1];
+                        switch(coverageLevel) {
+                            case 'LOW': defaultCoverageValue = 60; break;
+                            case 'MEDIUM': defaultCoverageValue = 90; break;
+                            case 'HIGH': defaultCoverageValue = 99; break;
+                        }
+                    }
+
+                    // Try to load saved coverage from backend (only if not skipped)
+                    if (!skipLoad && profileId && faultId && deviceId && methodId) {
+                        const cacheKey = getCoverageCacheKey(profileId, deviceId, faultId, methodId);
+
+                        console.log('Loading coverage for:', {profileId, deviceId, faultId, methodId, cacheKey});
+
+                        // Check cache first
+                        if (coverageCache.has(cacheKey)) {
+                            const cachedCoverage = coverageCache.get(cacheKey);
+                            isUpdatingCoverage = true;
+                            $coverageInput.val(cachedCoverage !== null ? cachedCoverage : defaultCoverageValue);
+                            isUpdatingCoverage = false;
+                            $coverageInput.closest('.input-group').find('button').prop('disabled', false);
+                            console.log('Using cached coverage:', cachedCoverage);
+                            return;
+                        }
+
+                        // Only make request if not already loading
+                        if (isLoadingCoverage) {
+                            console.log('Already loading coverage, skipping request');
+                            isUpdatingCoverage = true;
+                            $coverageInput.val(defaultCoverageValue);
+                            isUpdatingCoverage = false;
+                            $coverageInput.closest('.input-group').find('button').prop('disabled', false);
+                            return;
+                        }
+
+                        isLoadingCoverage = true;
+                        const url = `/api/profiles/${profileId}/faults/devices/${deviceId}/faults/${faultId}/method/${methodId}/coverage`;
+                        console.log('Making GET request to:', url);
+                        $.ajax({
+                            url: url,
+                            method: 'GET',
+                            success: function(response) {
+                                isLoadingCoverage = false;
+                                const coverage = response.coveragePercent !== null && response.coveragePercent !== undefined
+                                    ? response.coveragePercent
+                                    : null;
+
+                                // Only cache null if we don't have a value in cache already
+                                // This prevents overwriting a valid cached value with null
+                                if (coverage !== null || !coverageCache.has(cacheKey)) {
+                                    coverageCache.set(cacheKey, coverage);
+                                }
+
+                                if (coverage !== null) {
+                                    // Set value without triggering change event
+                                    isUpdatingCoverage = true;
+                                    $coverageInput.val(coverage);
+                                    isUpdatingCoverage = false;
+                                    console.log('Loaded saved coverage from backend:', coverage);
+                                } else {
+                                    // Check if we have a cached value (from previous save)
+                                    const cachedValue = coverageCache.get(cacheKey);
+                                    if (cachedValue !== null && cachedValue !== undefined) {
+                                        isUpdatingCoverage = true;
+                                        $coverageInput.val(cachedValue);
+                                        isUpdatingCoverage = false;
+                                        console.log('Using cached coverage (backend returned null):', cachedValue);
+                                    } else {
+                                        isUpdatingCoverage = true;
+                                        $coverageInput.val(defaultCoverageValue);
+                                        isUpdatingCoverage = false;
+                                        console.log(`Using default coverage: ${defaultCoverageValue}%`);
+                                    }
+                                }
+                                $coverageInput.closest('.input-group').find('button').prop('disabled', false);
+                            },
+                            error: function(xhr, status, error) {
+                                isLoadingCoverage = false;
+                                // Cache null result to prevent repeated requests
+                                coverageCache.set(cacheKey, null);
+
+                                // If no saved coverage, use default
+                                isUpdatingCoverage = true;
+                                $coverageInput.val(defaultCoverageValue);
+                                isUpdatingCoverage = false;
+                                $coverageInput.closest('.input-group').find('button').prop('disabled', false);
+                                console.log(`No saved coverage found, using default: ${defaultCoverageValue}%`);
+                            }
+                        });
+                    } else {
+                        // Fallback to default if we can't load or skipLoad is true
+                        isUpdatingCoverage = true;
+                        $coverageInput.val(defaultCoverageValue);
+                        isUpdatingCoverage = false;
+                        $coverageInput.closest('.input-group').find('button').prop('disabled', false);
+                    }
+                    return;
+                }
+
+                console.log('No method selected, resetting coverage to 0');
+                isUpdatingCoverage = true;
+                $coverageInput.val('0');
+                isUpdatingCoverage = false;
+                $coverageInput.closest('.input-group').find('button').prop('disabled', true);
+            };
+
+            window.adjustSValue = function(button, direction) {
+                const $input = $(button).siblings('input.s-value');
+                let value = parseFloat($input.val()) || 0.5;
+                const step = 0.1;
+                value += direction * step;
+                value = Math.max(0, Math.min(1, value));
+                $input.val(value.toFixed(1));
+                updateSValue($input[0]);
+                return false;
+            };
+
+            // Функция для изменения значения покрытия и сохранения на сервер
+            // Используется при нажатии на кнопки + и - рядом с полем ввода покрытия
+
+            function saveCoverage(profileId, deviceId, faultId, methodId, coveragePercent) {
+                console.log('Сохранение покрытия:', {profileId, deviceId, faultId, methodId, coveragePercent});
+
+                // Очищаем старые значения покрытия для этой неисправности
+                for (const key of coverageCache.keys()) {
+                    if (key.startsWith(`${profileId}_${deviceId}_${faultId}_`)) {
+                        coverageCache.delete(key);
+                    }
+                }
+
+                // Сохраняем новое значение покрытия в кэш
+                const cacheKey = getCoverageCacheKey(profileId, deviceId, faultId, methodId);
+                coverageCache.set(cacheKey, coveragePercent);
+
+                // Отправляем на сервер
+                return $.ajax({
+                    url: `/api/profiles/${profileId}/faults/devices/${deviceId}/faults/${faultId}/method`,
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        methodId: methodId,
+                        coveragePercent: coveragePercent
+                    }),
+                    success: function(response) {
+                        console.log('Покрытие успешно сохранено:', response);
+                        // showToast('Покрытие успешно сохранено', 'success');
+                    },
+                    error: function(xhr) {
+                        console.error('Ошибка при сохранении покрытия:', xhr);
+                        showToast('Ошибка при сохранении покрытия', 'danger');
+                        // В случае ошибки удаляем значение из кэша, чтобы при следующей попытке обновить
+                        coverageCache.delete(cacheKey);
+                    }
+                });
+            }
+
+            // Function to show toast notifications
+            function showToast(message, type = 'info') {
+                const toastId = 'toast-' + Date.now();
+                const toastHtml = `
+        <div id="${toastId}" class="toast align-items-center text-white bg-${type} border-0"
+             role="alert" aria-live="assertive" aria-atomic="true"
+             style="position: fixed; top: 20px; right: 20px; z-index: 1100; min-width: 250px;">
+            <div class="d-flex">
+                <div class="toast-body">
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto"
+                        data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    `;
+
+                const $toast = $(toastHtml);
+                $('body').append($toast);
+                const toast = new bootstrap.Toast($toast[0]);
+                toast.show();
+
+                // Remove toast after it's hidden
+                $toast.on('hidden.bs.toast', function() {
+                    $toast.remove();
+                });
+            }
+
+            function getProfileIdFromUrl() {
+                const match = window.location.pathname.match(/\/profiles\/(\d+)/);
+                return match ? match[1] : null;
+            }
+
+            // Функция для изменения значения покрытия и сохранения на сервер
+            window.adjustPercentage = function(button, change) {
+                try {
+                    const $input = $(button).closest('.input-group').find('input.coverage-percent');
+                    const deviceId = $input.data('device-id');
+                    const faultId = $input.data('fault-id');
+                    const methodSelect = $(`.diagnostic-method-select[data-device-id="${deviceId}"][data-fault-id="${faultId}"]`);
+                    const methodId = methodSelect.val();
+
+                    if (!methodId) {
+                        showToast('Сначала выберите метод диагностики', 'warning');
+                        return false;
+                    }
+
+                    // Получаем текущее значение и корректируем его
+                    let value = parseInt($input.val()) || 0;
+                    value = Math.max(0, Math.min(100, value + change));
+
+                    // Обновляем значение в поле ввода
+                    isUpdatingCoverage = true;
+                    $input.val(value);
+                    isUpdatingCoverage = false;
+
+                    // Сохраняем на сервер
+                    const profileId = getProfileIdFromUrl();
+                    if (profileId) {
+                        // Сохраняем покрытие и обновляем расчеты после успешного сохранения
+                        saveCoverage(profileId, deviceId, faultId, methodId, value)
+                            .then(() => {
+                                // Обновляем расчеты после успешного сохранения
+                                if (window.updateDCCOMP) {
+                                    window.updateDCCOMP();
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Ошибка при сохранении покрытия:', error);
+                                showToast('Ошибка при сохранении покрытия', 'danger');
+                                // Восстанавливаем предыдущее значение при ошибке
+                                const previousValue = parseInt($input.attr('data-prev-value')) || 0;
+                                isUpdatingCoverage = true;
+                                $input.val(previousValue);
+                                isUpdatingCoverage = false;
+                            });
+                    }
+
+                    return false;
+                } catch (error) {
+                    console.error('Ошибка при изменении покрытия:', error);
+                    showToast('Произошла ошибка при обновлении покрытия', 'danger');
+                    return false;
+                }
+            };
+
+            function updateSValue(input) {
+                const row = input.closest('tr');
+                const sValue = parseFloat(input.value) || 0;
+
+                // Ensure value is between 0 and 1
+                const clampedValue = Math.min(1, Math.max(0, sValue));
+                if (clampedValue !== sValue) {
+                    input.value = clampedValue.toFixed(1);
+                }
+
+                // Calculate D value
+                const dValue = 1 - clampedValue;
+                const dInput = row.querySelector('.d-value');
+                dInput.value = dValue.toFixed(1);
+
+                // Update lambda calculations
+                updateLambdaCalculations(row, clampedValue, dValue);
+
+                // Добавляем вызов для пересчёта УПБ после обновления S
+                if (window.calculateSafetyIntegrity) {
+                    calculateSafetyIntegrity();
+                }
+            }
+
+            function updateLambdaValue(input) {
+                const row = input.closest('tr');
+                const lambda = parseFloat(input.value) || 0;
+
+                // Get current S and D values
+                const sValue = parseFloat(row.querySelector('.s-value').value) || 0;
+                const dValue = 1 - sValue;
+
+                // Update calculations
+                updateLambdaCalculations(row, sValue, dValue, lambda);
+
+                // Добавляем вызов для пересчёта УПБ после обновления λ
+                if (window.calculateSafetyIntegrity) {
+                    calculateSafetyIntegrity();
+                }
+            }
+
+            function updateLambdaCalculations(row, sValue, dValue, lambda, force = false) {
+                const $row = $(row);
+
+                // If values are not provided, get them from the row
+                if (sValue === undefined) {
+                    sValue = parseFloat($row.find('.s-value').val()) || 0;
+                }
+                if (dValue === undefined) {
+                    dValue = parseFloat($row.find('.d-value').val()) || 0;
+                }
+                if (lambda === undefined) {
+                    // Try to get lambda from input field first, then from text content
+                    const $lambdaInput = $row.find('.lambda-value');
+                    lambda = $lambdaInput.length ? parseFloat($lambdaInput.val()) : parseFloat($row.find('[data-field="lambda"]').text()) || 0;
+
+                    // Ensure we have a valid lambda value
+                    if (isNaN(lambda) || lambda <= 0) {
+                        lambda = 10; // Default value if invalid or missing
+                        if ($lambdaInput.length) {
+                            $lambdaInput.val(lambda);
+                        }
+                    }
+                }
+
+                // Calculate λS and λD with 4 decimal places for internal calculations
+                const lambdaS = sValue * lambda;
+                const lambdaD = dValue * lambda;
+
+                // Получаем DC_COMP для λDD
+                const dcComp = parseFloat($row.find('.dc-comp-cell').text()) / 100 || 0;  // Как доля (0-1)
+                const lambdaDD = dcComp * lambdaD;
+
+                // Полный расчёт SFF для этого устройства (per-device)
+                const totalLambda = lambdaS + lambdaD;  // = λ
+                const sff = totalLambda > 0 ? ((lambdaS + lambdaDD) / totalLambda) * 100 : 0;
+
+                // Обновляем ячейки с 2 знаками после запятой
+                $row.find('[data-formula="s*lambda"]').text(lambdaS.toFixed(2));
+                $row.find('[data-formula="d*lambda"]').text(lambdaD.toFixed(2));
+                $row.find('[data-formula="lambda_dd_du"]').text(lambdaD.toFixed(2));  // λDD + λDU = λD
+                $row.find('[data-formula="lambda_s_plus_lambda_dd"]').text((lambdaS + lambdaDD).toFixed(2));
+
+                // Сохраняем для агрегации в summary (округлённые до 1 знака, как в примере)
+                $row.attr('data-lambda-s', lambdaS.toFixed(1));
+                $row.attr('data-lambda-dd', lambdaDD.toFixed(1));
+                $row.attr('data-total-lambda', totalLambda.toFixed(1));
+                $row.attr('data-sff', sff.toFixed(1));  // Опционально, для per-device SFF
+
+                console.log(`Updated calculations for device ${$row.find('td:first').text().trim()}:`, {
+                    s: sValue,
+                    d: dValue,
+                    lambda: lambda,
+                    lambdaS: lambdaS.toFixed(4),
+                    lambdaD: lambdaD.toFixed(4),
+                    dcComp: (dcComp * 100).toFixed(0),
+                    lambdaDD: lambdaDD.toFixed(4),
+                    sff: sff.toFixed(2) + '%'
+                });
+            }
+
+            // Function to set colors for coverage indicators
+            function setCoverageColors() {
+                document.querySelectorAll('[data-coverage-level]').forEach(option => {
+                    const level = option.getAttribute('data-coverage-level');
+
+                    // Set background color based on coverage level
+                    const indicator = option.querySelector('.coverage-indicator') || option;
+                    if (indicator) {
+                        switch(level) {
+                            case 'LOW':
+                                indicator.style.backgroundColor = '#add8e6';
+                                indicator.style.borderLeft = '3px solid #007bff';
+                                break;
+                            case 'MEDIUM':
+                                indicator.style.backgroundColor = '#d4edda';
+                                indicator.style.borderLeft = '3px solid #006400';
+                                break;
+                            case 'HIGH':
+                                indicator.style.backgroundColor = '#f8d7da';
+                                indicator.style.borderLeft = '3px solid #800000';
+                                break;
+                            default:
+                                indicator.style.backgroundColor = '#f8f9fa';
+                        }
+                    }
+                });
+            }
+
+            // Function to calculate safety integrity level (SIL)
+            function calculateSafetyIntegrity() {
+                const selectedArchitecture = $('#architectureType').val();
+                if (!selectedArchitecture) return null;
+
+                // Агрегируем суммы по всем устройствам для полного SFF (Σ)
+                let totalLambdaS = 0;
+                let totalLambdaDD = 0;
+                let totalLambdaD = 0;
+                let hasData = false;
+                $('table:has(.dc-comp-cell) tbody tr[data-device-id]').each(function() {
+                    const lambdaS = parseFloat($(this).attr('data-lambda-s') || '0');
+                    const lambdaDD = parseFloat($(this).attr('data-lambda-dd') || '0');
+                    const totalLambdaPerDevice = parseFloat($(this).attr('data-total-lambda') || '0');
+                    if (totalLambdaPerDevice > 0) {
+                        hasData = true;
+                        totalLambdaS += lambdaS;
+                        totalLambdaDD += lambdaDD;
+                        totalLambdaD += (totalLambdaPerDevice - lambdaS);  // λD = total - λS
+                    }
+                });
+
+                const totalDenominator = totalLambdaS + totalLambdaD;
+                const sff = totalDenominator > 0 ? ((totalLambdaS + totalLambdaDD) / totalDenominator) * 100 : 0;
+                const minCoveragePercent = hasData ? sff : 0;
+
+                // Determine SIL based on architecture and coverage
+                let sil = 'Н/Д';
+                const n = selectedArchitecture === 'ONE_OUT_OF_ONE' ? 0 :
+                    selectedArchitecture === 'ONE_OUT_OF_TWO' ? 1 : 2;
+
+                if (minCoveragePercent < 60) {
+                    sil = n >= 1 ? 'УПБ 1' : '-';
+                    if (n >= 2) sil = 'УПБ 2';
+                } else if (minCoveragePercent < 90) {
+                    sil = n === 0 ? 'УПБ 1' : n === 1 ? 'УПБ 2' : 'УПБ 3';
+                } else if (minCoveragePercent < 99) {
+                    sil = n === 0 ? 'УПБ 2' : n === 1 ? 'УПБ 3' : 'УПБ 4';
+                } else {
+                    sil = n === 0 ? 'УПБ 2' : 'УПБ 4';
+                }
+
+                // Update the table
+                updateSafetyTable(selectedArchitecture, minCoveragePercent);
+
+                // Информативный текст с реальными суммами (как в вашем примере)
+                const architectureText = selectedArchitecture === 'ONE_OUT_OF_ONE' ? '1oo1' :
+                    selectedArchitecture === 'ONE_OUT_OF_TWO' ? '1oo2' : '1oo3';
+                if (hasData) {
+                    const lambdaS = totalLambdaS.toFixed(1);
+                    const lambdaDD = totalLambdaDD.toFixed(1);
+                    const totalLambda = totalDenominator.toFixed(1);
+                    $('#upb-summary').html(
+                        `ДБО = <span style="font-size: smaller;">(Σ λ<sub>S</sub> + Σ λ<sub>DD</sub>) / (Σ λ<sub>S</sub> + Σ λ<sub>DD</sub> + Σ λ<sub>DU</sub>) × 100%</span> ` +
+                        `= (${lambdaS} + ${lambdaDD}) / ${totalLambda} × 100% = ${sff.toFixed(1)}% ` +
+                        `(по архитектуре ${architectureText}, N=${n}) = ${sil}`
+                    );
+                } else {
+                    $('#upb-summary').text('УПБ = -- (формула не рассчитана)');
+                }
+
+                return {
+                    coveragePercent: minCoveragePercent,
+                    sil: sil
+                };
+            }
+
+            // Function to update the safety table
+            function updateSafetyTable(architecture, coveragePercent) {
+                const n = architecture === 'ONE_OUT_OF_ONE' ? 0 :
+                    architecture === 'ONE_OUT_OF_TWO' ? 1 : 2;
+
+                // Clear all previous highlights
+                $('.safety-table td').removeClass('table-primary fw-bold');
+
+                // Find the row that matches the current coverage range
+                let targetRow = null;
+                $('.safety-table tbody tr').each(function() {
+                    const $row = $(this);
+                    const rangeText = $row.find('td:first').text().trim();
+
+                    if ((rangeText.includes('менее 60%') && coveragePercent < 60) ||
+                        (rangeText.includes('от 60% до менее 90%') && coveragePercent >= 60 && coveragePercent < 90) ||
+                        (rangeText.includes('от 90% до менее 99%') && coveragePercent >= 90 && coveragePercent < 99) ||
+                        (rangeText.includes('более и равно 99%') && coveragePercent >= 99)) {
+                        targetRow = $row;
+                        return false;
+                    }
+                });
+
+                if (!targetRow) return;
+
+                // Find and highlight the specific cell
+                const cellIndex = n + 1;
+                const $cell = targetRow.find(`td:eq(${cellIndex})`);
+                $cell.addClass('table-primary fw-bold');
+            }
+
+            // Update method visibility
+            var updateMethodVisibility = function() {
+                if (typeof calculateSafetyIntegrity === 'function') {
+                    calculateSafetyIntegrity();
+                }
+            };
+
+            // Helper function to get profile ID from multiple possible locations
+            function getProfileIdFromUrl() {
+                // 1. Try to get from the hidden input
+                const $profileIdInput = $('#profileId');
+                if ($profileIdInput.length) {
+                    const id = $profileIdInput.val();
+                    if (id) {
+                        console.log('Got profile ID from hidden input:', id);
+                        return id;
+                    }
+                }
+
+                // 2. Try to get from URL path
+                const match = window.location.pathname.match(/\/profiles\/(\d+)/);
+                if (match && match[1]) {
+                    console.log('Got profile ID from URL:', match[1]);
+                    return match[1];
+                }
+
+                // 3. Try other possible input names
+                const $altProfileInput = $('input[name="profileId"]');
+                if ($altProfileInput.length) {
+                    const id = $altProfileInput.val();
+                    if (id) {
+                        console.log('Got profile ID from alternate input:', id);
+                        return id;
+                    }
+                }
+
+                // 4. As a last resort, try to find it in the page content
+                const $profileIdDisplay = $('dd:contains("ID:")').next('dd');
+                if ($profileIdDisplay.length) {
+                    const id = $profileIdDisplay.text().trim();
+                    if (id && !isNaN(id)) {
+                        console.log('Got profile ID from page content:', id);
+                        return id;
+                    }
+                }
+
+                console.error('Could not determine profile ID.');
+
+                return null;
+            }
+
+            // Simple table sorting
+            function sortTable(columnIndex, ascending) {
+                const $table = $('#devicesTable');
+                const $rows = $('tbody > tr', $table).get();
+
+                $rows.sort((a, b) => {
+                    const aValue = $('td', a).eq(columnIndex).text().trim().toLowerCase();
+                    const bValue = $('td', b).eq(columnIndex).text().trim().toLowerCase();
+                    return ascending
+                        ? aValue.localeCompare(bValue)
+                        : bValue.localeCompare(aValue);
+                });
+
+                $('tbody', $table).empty().append($rows);
+            }
+
+            // Initialize tooltips
+            var initTooltips = function() {
+                $('[data-bs-toggle="tooltip"]').tooltip({
+                    trigger: 'hover',
+                    html: true
+                });
+            };
+
+            // Initialize the page
+            var initPage = function() {
+                initTooltips();
+
+                // Set up event listeners
+                $(document).on('change', '.method-checkbox', function() {
+                    if (typeof calculateSafetyIntegrity === 'function') {
+                        calculateSafetyIntegrity();
+                    }
+                });
+
+                // Handle fault checkbox changes (if uncommented in future)
+                $(document).on('change', '.fault-checkbox', function() {
+                    // updateFaultStatus(this);
+                    if (typeof calculateSafetyIntegrity === 'function') {
+                        calculateSafetyIntegrity();
+                    }
+                });
+
+                $('#architectureType').on('change', updateMethodVisibility);
+
+                // Update when S value changes
+                $(document).on('input change', '.s-value', function() {
+                    const $input = $(this);
+                    let value = parseFloat($input.val()) || 0;
+
+                    // Ensure value is between 0 and 1
+                    if (value < 0) {
+                        value = 0;
+                        $input.val('0');
+                    }
+                    if (value > 1) {
+                        value = 1;
+                        $input.val('1');
+                    } else {
+                        $input.val(value.toString());
+                    }
+
+                    // Update D value to maintain S + D = 1
+                    const $row = $input.closest('tr');
+                    const dValue = 1 - value;
+                    $row.find('.d-value').val(dValue.toFixed(1));
+
+                    console.log('S value changed:', {
+                        s: value,
+                        d: dValue,
+                        row: $row[0]
+                    });
+
+                    // Update calculations immediately
+                    updateSValue($input[0]);
+                });
+
+                // Handle lambda changes
+                $(document).on('input change', '.lambda-value', function() {
+                    updateLambdaValue(this);
+                });
+
+                // Also update on blur to ensure final value is set
+                $(document).on('blur', '.lambda-value', function() {
+                    const $input = $(this);
+                    let value = parseFloat($input.val()) || 0;
+                    if (value < 0) {
+                        value = 0;
+                        $input.val(value);
+                    }
+                });
+
+                // Initialize UI components
+                $('.table-bordered').addClass('safety-table');
+
+                if ($.fn.selectpicker) {
+                    $('.selectpicker').selectpicker();
+                }
+
+                // Initial update
+                updateMethodVisibility();
+            };
+
+            $(document).on('change', '.diagnostic-method-select', function() {
+                const $select = $(this);
+                const methodId = $select.val();
+                const faultId = $select.data('fault-id');
+                const deviceId = $select.data('device-id');
+                const profileId = getProfileIdFromUrl();
+
+                if (!faultId || !deviceId || !profileId) {
+                    console.error('Missing required IDs:', {faultId, deviceId, profileId});
+                    return;
+                }
+
+                // Save the current value as previous value for potential rollback
+                $select.data('previous-value', $select.val());
+
+                // Get the coverage input
+                const $coverageInput = $select.closest('.fault-item').find('.coverage-percent');
+
+                // Check if it's the default "Select method" option
+                if (!methodId) {
+                    // Clear the coverage input
+                    isUpdatingCoverage = true;
+                    $coverageInput.val(0);
+                    isUpdatingCoverage = false;
+
+                    // Make an API call to clear the method and set coverage to 0
+                    $.ajax({
+                        url: `/api/profiles/${profileId}/faults/devices/${deviceId}/faults/${faultId}/clear-method`,
+                        method: 'POST',
+                        success: function(response) {
+                            console.log('Method cleared successfully');
+                            // Clear the cache for this fault
+                            for (const key of coverageCache.keys()) {
+                                if (key.startsWith(`${profileId}_${deviceId}_${faultId}_`)) {
+                                    coverageCache.delete(key);
+                                }
+                            }
+                            // Update UI and calculations
+                            if (window.updateDCCOMP) {
+                                window.updateDCCOMP(true);
+                            }
+                            // showToast('Метод диагностики успешно удален', 'success');
+                        },
+                        error: function(xhr, status, error) {
+                            console.error('Error clearing method:', {status, error, response: xhr.responseText});
+                            // Revert the select to its previous value
+                            const previousValue = $select.data('previous-value');
+                            if (previousValue !== undefined) {
+                                $select.val(previousValue);
+                            }
+                            showToast('Ошибка при удалении метода диагностики', 'danger');
+                        }
+                    });
+                    return;
+                }
+
+                // Handle selection of an actual diagnostic method
+                const selectedOption = $select.find('option:selected');
+                const coverageMatch = selectedOption.text().match(/\((LOW|MEDIUM|HIGH)\)/);
+                let coveragePercent = 0;
+
+                // Set default coverage based on method level
+                if (coverageMatch) {
+                    const coverageLevel = coverageMatch[1];
+                    switch(coverageLevel) {
+                        case 'LOW': coveragePercent = 60; break;
+                        case 'MEDIUM': coveragePercent = 90; break;
+                        case 'HIGH': coveragePercent = 99; break;
+                        default: coveragePercent = 0;
+                    }
+                }
+
+                // Update the coverage input
+                isUpdatingCoverage = true;
+                $coverageInput.val(coveragePercent);
+                isUpdatingCoverage = false;
+
+                // Save the method selection and coverage
+                $.ajax({
+                    url: `/api/profiles/${profileId}/faults/devices/${deviceId}/faults/${faultId}/method`,
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        methodId: methodId,
+                        coveragePercent: coveragePercent
+                    }),
+                    success: function(response) {
+                        console.log('Method updated successfully:', response);
+                        // Update cache
+                        const cacheKey = getCoverageCacheKey(profileId, deviceId, faultId, methodId);
+                        coverageCache.set(cacheKey, coveragePercent);
+
+                        // Update calculations
+                        if (window.updateDCCOMP) {
+                            window.updateDCCOMP(true);
+                        }
+                        // showToast('Метод диагностики успешно сохранен', 'success');
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error updating method:', {status, error, response: xhr.responseText});
+                        // Revert the select to its previous value
+                        const previousValue = $select.data('previous-value');
+                        if (previousValue !== undefined) {
+                            $select.val(previousValue);
+                        }
+                        showToast('Ошибка при сохранении метода диагностики', 'danger');
+                    }
+                });
+            });
+
+            // Note: updateCoverageDisplay is already called in the main change handler above
+            // This handler is kept for backward compatibility but should not duplicate calls
+
+            // Update DCCOMP when percentage changes and save to backend
+            $(document).on('change', '.coverage-percent', function() {
+                // Skip if we're programmatically updating the value
+                if (isUpdatingCoverage || isLoadingCoverage) {
+                    console.log('Skipping coverage save - programmatic update');
+                    if (window.updateDCCOMP) {
+                        window.updateDCCOMP();
+                    }
+                    return;
+                }
+
+                const $input = $(this);
+                const coveragePercent = parseInt($input.val()) || 0;
+                const faultId = $input.data('fault-id');
+                const deviceId = $input.data('device-id');
+
+                // Get the selected method ID
+                const $select = $input.closest('.fault-item').find('.diagnostic-method-select');
+                const methodId = $select.val();
+
+                if (!methodId || !faultId || !deviceId) {
+                    console.warn('Missing required IDs for saving coverage:', {methodId, faultId, deviceId});
+                    if (window.updateDCCOMP) {
+                        window.updateDCCOMP();
+                    }
+                    return;
+                }
+
+                const profileId = getProfileIdFromUrl();
+                if (!profileId) {
+                    console.error('Cannot save coverage: No profile ID found');
+                    if (window.updateDCCOMP) {
+                        window.updateDCCOMP();
+                    }
+                    return;
+                }
+
+                // Save coverage percentage to backend
+                console.log('Saving coverage percentage:', {profileId, deviceId, faultId, methodId, coveragePercent});
+                $.ajax({
+                    url: `/api/profiles/${profileId}/faults/devices/${deviceId}/faults/${faultId}/method`,
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        methodId: methodId,
+                        coveragePercent: coveragePercent
+                    }),
+                    success: function(response) {
+                        console.log('Coverage percentage saved successfully:', response);
+
+                        // Update cache
+                        const cacheKey = getCoverageCacheKey(profileId, deviceId, faultId, methodId);
+                        coverageCache.set(cacheKey, coveragePercent);
+                        console.log('Cache updated:', cacheKey, '=', coveragePercent);
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error saving coverage percentage:', {status, error, response: xhr.responseText});
+                    }
+                });
+
+                if (window.updateDCCOMP) {
+                    window.updateDCCOMP();
+                }
+            });
+
+            $(document).on('click', '.btn-outline-secondary', function() {
+                // Small delay to ensure the value is updated
+                setTimeout(() => window.updateDCCOMP(), 10);
+            });
+
+            // Prevent manual input in percentage field
+            $(document).on('keydown', '.coverage-percent', function(e) {
+                e.preventDefault();
+                return false;
+            });
+
+            // Initialize sorting
+            $('th.sortable').on('click', function() {
+                const $this = $(this);
+                const columnIndex = $this.index();
+                const isAsc = !$this.hasClass('sort-asc');
+
+                // Update sort indicators
+                $('th.sortable').removeClass('sort-asc sort-desc');
+                $this.addClass(isAsc ? 'sort-asc' : 'sort-desc');
+
+                // Sort the table
+                sortTable(columnIndex, isAsc);
+            });
+
+            // Обработчик клика на категорию для открытия модального окна
+            $(document).on('click', '#openCoverageModalBtn', function() {
+                const modal = new bootstrap.Modal(document.getElementById('coverageLevelsModal'));
+                modal.show();
+            });
+
+            // Initialize when document is ready
+            $(function() {
+                // First, load saved methods from backend, then initialize coverage
+                loadSavedMethods().done(function() {
+                    console.log('Saved methods loaded, waiting for DOM to update...');
+
+                    // Wait a bit for the DOM to update with selected methods
+                    setTimeout(function() {
+                        console.log('Initializing coverage after DOM update...');
+
+                        // Initialize coverage displays and DCCOMP (only once!)
+                        if (window.initializeCoverage) {
+                            window.initializeCoverage();
+                        }
+                    }, 100);
+                }).fail(function() {
+                    console.warn('Failed to load saved methods, initializing with defaults...');
+
+                    // Initialize coverage displays and DCCOMP even if loading fails
+                    if (window.initializeCoverage) {
+                        window.initializeCoverage();
+                    }
+                });
+
+                // Initialize the rest of the page
+                initPage();
+                if (window.calculateSafetyIntegrity) {
+                    calculateSafetyIntegrity();  // Инициальный расчёт УПБ на загрузке
+                }
+            });
+
+            // Docume
