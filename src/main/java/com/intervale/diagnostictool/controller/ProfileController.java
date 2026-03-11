@@ -6,10 +6,12 @@ import com.intervale.diagnostictool.dto.FaultWithStatusDto;
 import com.intervale.diagnostictool.dto.ProfileFaultDto;
 import com.intervale.diagnostictool.model.Device;
 import com.intervale.diagnostictool.model.Profile;
+import com.intervale.diagnostictool.model.ProfileDeviceConfig;
 import com.intervale.diagnostictool.model.DiagnosticMethod;
 import com.intervale.diagnostictool.service.DeviceService;
 import com.intervale.diagnostictool.service.DiagnosticMethodService;
 import com.intervale.diagnostictool.service.FaultTypeService;
+import com.intervale.diagnostictool.service.ProfileDeviceConfigService;
 import com.intervale.diagnostictool.service.ProfileFaultService;
 import com.intervale.diagnostictool.service.ProfileService;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +33,7 @@ public class ProfileController {
     private final ProfileFaultService profileFaultService;
     private final FaultTypeService faultTypeService;
     private final DiagnosticMethodService diagnosticMethodService;
+    private final ProfileDeviceConfigService profileDeviceConfigService;
 
     @GetMapping
     public String listProfiles(Model model) {
@@ -117,8 +120,12 @@ public class ProfileController {
             devicesWithFaults.add(deviceWithFaults);
         }
         
+        // Загружаем конфигурацию устройств (S и lambda значения)
+        Map<Long, ProfileDeviceConfig> deviceConfigs = profileDeviceConfigService.getConfigMapForProfile(id);
+
         model.addAttribute("profile", profile);
         model.addAttribute("devicesWithFaults", devicesWithFaults);
+        model.addAttribute("deviceConfigs", deviceConfigs);
         return "profiles/view";
     }
 

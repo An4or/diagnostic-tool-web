@@ -15,6 +15,10 @@ export class ProfileViewController {
 
         this.profileId = this.getProfileIdFromUrl();
         this.initialized = false;
+
+        // Debounce timers для сохранения
+        this.sValueDebounceTimer = null;
+        this.lambdaDebounceTimer = null;
     }
 
     /**
@@ -59,7 +63,7 @@ export class ProfileViewController {
         selects.forEach(select => {
             const selectedOption = select.options[select.selectedIndex];
             const coverageInput = select.closest('.fault-item')?.querySelector('.coverage-percent');
-            
+
             if (!coverageInput) return;
 
             const faultId = select.dataset.faultId;
@@ -114,18 +118,6 @@ export class ProfileViewController {
             }
         });
 
-        // Кнопки +/- для покрытия
-        // document.addEventListener('click', async (e) => {
-        //     const button = e.target.closest('button[onclick^="adjustPercentage"]');
-        //     if (button) {
-        //         e.preventDefault();
-        //         const change = button.textContent.trim() === '+' ? 1 : -1;
-        //         await this.handleCoverageAdjust(button, change);
-        //     }
-        // });
-        // Кнопки +/- для покрытия - УБРАНО, используется inline onclick
-        // (дублирование приводило к шагу 2% вместо 1%)
-
         // Изменение S значения
         document.addEventListener('input', (e) => {
             if (e.target.classList.contains('s-value')) {
@@ -144,7 +136,7 @@ export class ProfileViewController {
         const architectureSelect = document.getElementById('architectureType');
         if (architectureSelect) {
             architectureSelect.addEventListener('change', () => {
-                this.safetyCalculator.calculate();
+                this.handleArchitectureChange(architectureSelect);
             });
         }
 
@@ -214,7 +206,6 @@ export class ProfileViewController {
 
             this.dccompCalculator.update(true);
             this.safetyCalculator.calculate();
-            // this.showToast('Метод диагностики успешно сохранен', 'success');
         } catch (error) {
             console.error('Error saving method:', error);
             this.showToast('Ошибка при сохранении метода диагностики', 'danger');
@@ -287,7 +278,7 @@ export class ProfileViewController {
     async handleCoverageAdjust(button, change) {
         const inputGroup = button.closest('.input-group');
         const input = inputGroup?.querySelector('input.coverage-percent');
-        
+
         if (!input) return;
 
         const deviceId = input.dataset.deviceId;
@@ -358,6 +349,45 @@ export class ProfileViewController {
         }
 
         this.safetyCalculator.calculate();
+
+        // Сохраняем значение
+        this.saveSValue(input, value);
+    }
+
+    /**
+     * Сохранить S значение на сервере
+     */
+    async saveSValue(input, value) {
+        const row = input.closest('tr');
+        const deviceId = row?.dataset.deviceId;
+
+        if (!deviceId || !this.profileId) return;
+
+        // Debounce: отменяем предыдущий таймер
+        if (this.sValueDebounceTimer) {
+            clearTimeout(this.sValueDebounceTimer);
+        }
+
+        // Сохраняем через 500ms после последнего изменения
+        this.sValueDebounceTimer = setTimeout(async () => {
+            try {
+                const response = await fetch(
+                    `/api/profiles/${this.profileId}/device-config/devices/${deviceId}/s-value?value=${value}`,
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    }
+                );
+
+                if (!response.ok) {
+                    console.error('Error saving S value:', response.status);
+                }
+            } catch (error) {
+                console.error('Error saving S value:', error);
+            }
+        }, 500);
     }
 
     /**
@@ -392,6 +422,77 @@ export class ProfileViewController {
             this.dccompCalculator.updateLambdaCalculations(row);
         }
         this.safetyCalculator.calculate();
+
+        // Сохраняем значение
+        this.saveLambdaValue(input, parseFloat(input.value) || 0);
+    }
+
+    /**
+     * Сохранить lambda значение на сервере
+     */
+    async saveLambdaValue(input, value) {
+        const row = input.closest('tr');
+        const deviceId = row?.dataset.deviceId;
+
+        if (!deviceId || !this.profileId) return;
+
+        // Debounce: отменяем предыдущий таймер
+        if (this.lambdaDebounceTimer) {
+            clearTimeout(this.lambdaDebounceTimer);
+        }
+
+        // Сохраняем через 500ms после последнего изменения
+        this.lambdaDebounceTimer = setTimeout(async () => {
+            try {
+                const response = await fetch(
+                    `/api/profiles/${this.profileId}/device-config/devices/${deviceId}/lambda-value?value=${value}`,
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    }
+                );
+
+                if (!response.ok) {
+                    console.error('Error saving lambda value:', response.status);
+                }
+            } catch (error) {
+                console.error('Error saving lambda value:', error);
+            }
+        }, 500);
+    }
+
+    /**
+     * Обработать изменение типа архитектуры
+     */
+    async handleArchitectureChange(select) {
+        const architecture = select.value;
+
+        if (!architecture || !this.profileId) return;
+
+        try {
+            const response = await fetch(
+                `/api/profiles/${this.profileId}/architecture?architecture=${architecture}`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+
+            if (response.ok) {
+                this.safetyCalculator.calculate();
+                console.log('Architecture saved successfully');
+            } else {
+                console.error('Error saving architecture:', response.status);
+                this.showToast('Ошибка при сохранении архитектуры', 'danger');
+            }
+        } catch (error) {
+            console.error('Error saving architecture:', error);
+            this.showToast('Ошибка при сохранении архитектуры', 'danger');
+        }
     }
 
     /**

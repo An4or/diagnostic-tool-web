@@ -164,7 +164,7 @@ export class DCCOMPCalculator {
         const updateCell = (selector, value) => {
             const cell = row.querySelector(selector);
             if (cell) {
-                cell.textContent = value.toFixed(2);
+                cell.textContent = value.toFixed(1);
             }
         };
 
@@ -179,6 +179,7 @@ export class DCCOMPCalculator {
         row.setAttribute('data-lambda-dd', lambdaDD.toFixed(1));
         row.setAttribute('data-total-lambda', totalLambda.toFixed(1));
         row.setAttribute('data-sff', sff.toFixed(1));
+        row.setAttribute('data-lambda-du', lambdaDU.toFixed(1));
 
         console.log(`Updated calculations:`, {
             s: sValue,

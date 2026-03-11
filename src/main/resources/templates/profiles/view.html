@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+﻿﻿<!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
       layout:decorate="~{layouts/base}"
       th:with="title='View Profile'">
@@ -155,19 +155,22 @@
                                     <div class="input-group input-group-sm" style="width: 100px;">
                                         <button type="button" class="btn btn-outline-secondary btn-sm" onclick="adjustSValue(this, -1)">-</button>
                                         <input type="number" class="form-control form-control-sm text-center s-value"
-                                               value="0.5" min="0" max="1" step="0.1"
+                                               th:value="${deviceConfigs.get(device.id)?.sValue ?: 0.5}"
+                                               min="0" max="1" step="0.1"
                                                style="width: 50px; -moz-appearance: textfield;">
                                         <button type="button" class="btn btn-outline-secondary btn-sm" onclick="adjustSValue(this, 1)">+</button>
                                     </div>
                                 </td>
                                 <td class="d-value-cell">
                                     <input type="number" class="form-control form-control-sm text-center d-value"
-                                           value="0.5" readonly style="width: 80px;">
+                                           th:value="${1.0 - (deviceConfigs.get(device.id)?.sValue ?: 0.5)}"
+                                           readonly style="width: 80px;">
                                 </td>
                                 <td class="dc-comp-cell">0</td>
                                 <td>
                                     <input type="number" class="form-control form-control-sm text-center lambda-value"
-                                           value="10" min="0" step="0.1"
+                                           th:value="${deviceConfigs.get(device.id)?.lambdaValue ?: 10.0}"
+                                           min="0" step="0.1"
                                            style="width: 80px; -moz-appearance: textfield;">
                                 </td>
                                 <td class="calculated" data-formula="s*lambda"></td>
@@ -249,25 +252,25 @@
                 </div>
             </div>
 
-            <div class="row mt-4">
-                <div class="col-12">
-                    <div class="card bg-light">
-                        <div class="card-body">
-                            <!-- CSRF Token and Profile ID -->
-                            <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" id="csrfToken" />
-                            <input type="hidden" th:unless="${_csrf != null}" name="_csrf" value="" id="csrfToken" />
-                            <input type="hidden" id="profileId" th:value="${profile.id}" />
-                            <h5 class="card-title">Информация профиля</h5>
-                            <dl class="row">
-                                <dt class="col-sm-3">ID</dt>
-                                <dd class="col-sm-9" th:text="${profile.id}">-</dd>
+<!--            <div class="row mt-4">-->
+<!--                <div class="col-12">-->
+<!--                    <div class="card bg-light">-->
+<!--                        <div class="card-body">-->
+<!--                            &lt;!&ndash; CSRF Token and Profile ID &ndash;&gt;-->
+<!--                            <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" id="csrfToken" />-->
+<!--                            <input type="hidden" th:unless="${_csrf != null}" name="_csrf" value="" id="csrfToken" />-->
+<!--                            <input type="hidden" id="profileId" th:value="${profile.id}" />-->
+<!--                            <h5 class="card-title">Информация профиля</h5>-->
+<!--                            <dl class="row">-->
+<!--                                <dt class="col-sm-3">ID</dt>-->
+<!--                                <dd class="col-sm-9" th:text="${profile.id}">-</dd>-->
 
-                                <!-- createdAt/updatedAt removed from schema -->
-                            </dl>
-                        </div>
-                    </div>
-                </div>
-            </div>
+<!--                                &lt;!&ndash; createdAt/updatedAt removed from schema &ndash;&gt;-->
+<!--                            </dl>-->
+<!--                        </div>-->
+<!--                    </div>-->
+<!--                </div>-->
+<!--            </div>-->
 
         </div>
         <div class="card-footer text-end">

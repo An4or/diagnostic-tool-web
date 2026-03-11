@@ -19,6 +19,7 @@ export class SafetyIntegrityCalculator {
         let totalLambdaS = 0;
         let totalLambdaDD = 0;
         let totalLambdaD = 0;
+        let totalLambdaDU = 0;
         let hasData = false;
 
         const deviceRows = document.querySelectorAll('table:has(.dc-comp-cell) tbody tr[data-device-id]');
@@ -26,12 +27,14 @@ export class SafetyIntegrityCalculator {
         deviceRows.forEach(row => {
             const lambdaS = parseFloat(row.getAttribute('data-lambda-s') || '0');
             const lambdaDD = parseFloat(row.getAttribute('data-lambda-dd') || '0');
+            const lambdaDU = parseFloat(row.getAttribute('data-lambda-du') || '0');
             const totalLambdaPerDevice = parseFloat(row.getAttribute('data-total-lambda') || '0');
 
             if (totalLambdaPerDevice > 0) {
                 hasData = true;
                 totalLambdaS += lambdaS;
                 totalLambdaDD += lambdaDD;
+                totalLambdaDU += lambdaDU;
                 totalLambdaD += (totalLambdaPerDevice - lambdaS);
             }
         });
@@ -47,7 +50,7 @@ export class SafetyIntegrityCalculator {
         this.updateTable(selectedArchitecture, minCoveragePercent);
 
         // Обновляем summary
-        this.updateSummary(hasData, totalLambdaS, totalLambdaDD, totalDenominator, sff, sil, selectedArchitecture);
+        this.updateSummary(hasData, totalLambdaS, totalLambdaDD, totalLambdaDU, sff, sil, selectedArchitecture);
 
         return {
             coveragePercent: minCoveragePercent,
@@ -124,7 +127,7 @@ export class SafetyIntegrityCalculator {
     /**
      * Обновить summary текст
      */
-    updateSummary(hasData, totalLambdaS, totalLambdaDD, totalDenominator, sff, sil, architecture) {
+    updateSummary(hasData, totalLambdaS, totalLambdaDD, totalLambdaDU, sff, sil, architecture) {
         const summaryElement = document.getElementById('upb-summary');
         if (!summaryElement) return;
 
@@ -134,11 +137,11 @@ export class SafetyIntegrityCalculator {
         if (hasData) {
             const lambdaS = totalLambdaS.toFixed(1);
             const lambdaDD = totalLambdaDD.toFixed(1);
-            const totalLambda = totalDenominator.toFixed(1);
+            const lambdaDU = totalLambdaDU.toFixed(1);
 
-            summaryElement.innerHTML = 
+            summaryElement.innerHTML =
                 `ДБО = <span style="font-size: smaller;">(Σ λ<sub>S</sub> + Σ λ<sub>DD</sub>) / (Σ λ<sub>S</sub> + Σ λ<sub>DD</sub> + Σ λ<sub>DU</sub>) × 100%</span> ` +
-                `= (${lambdaS} + ${lambdaDD}) / ${totalLambda} × 100% = ${sff.toFixed(1)}% ` +
+                `= (${lambdaS} + ${lambdaDD}) / (${lambdaS} + ${lambdaDD} + ${lambdaDU}) × 100% = ${sff.toFixed(1)}% ` +
                 `(по архитектуре ${architectureText}, N=${n}) = ${sil}`;
         } else {
             summaryElement.textContent = 'УПБ = -- (формула не рассчитана)';
