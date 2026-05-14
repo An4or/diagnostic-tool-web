@@ -8,6 +8,11 @@ export class DCCOMPCalculator {
         this.isUpdating = false;
         this.lastUpdateTime = 0;
         this.UPDATE_DEBOUNCE_TIME = 500;
+        this.coverageWeights = {
+            LOW: 0.6,
+            MEDIUM: 0.3,
+            HIGH: 0.1
+        };
     }
 
     /**
@@ -47,26 +52,33 @@ export class DCCOMPCalculator {
 
                 console.log(`Found ${methodSelects.length} method selects for device`);
 
-                let totalCoverage = 0;
-                let selectedMethodsCount = 0;
+                const groupStats = {
+                    LOW: { count: 0, totalCoverage: 0 },
+                    MEDIUM: { count: 0, totalCoverage: 0 },
+                    HIGH: { count: 0, totalCoverage: 0 }
+                };
 
                 methodSelects.forEach((select, idx) => {
                     const selectedOption = select.options[select.selectedIndex];
-                    
+
                     if (selectedOption && selectedOption.value) {
                         const faultItem = select.closest('.fault-item');
                         const coverageInput = faultItem?.querySelector('.coverage-percent');
                         const coverage = parseInt(coverageInput?.value) || 0;
+                        const coverageLevel = (faultItem?.dataset?.coverageLevel || '').toUpperCase();
 
                         console.group(`Method ${idx + 1}:`);
                         console.log('Selected option:', selectedOption.text);
+                        console.log('Coverage level:', coverageLevel);
                         console.log('Coverage input value:', coverageInput?.value);
                         console.log('Parsed coverage:', coverage);
 
-                        if (coverage > 0) {
-                            console.log('Adding to total coverage');
-                            totalCoverage += coverage;
-                            selectedMethodsCount++;
+                        if (!this.coverageWeights[coverageLevel]) {
+                            console.log('Skipping - unknown coverage requirement group');
+                        } else if (coverage > 0) {
+                            console.log(`Adding to group ${coverageLevel}`);
+                            groupStats[coverageLevel].count++;
+                            groupStats[coverageLevel].totalCoverage += coverage;
                         } else {
                             console.log('Skipping - coverage is 0 or invalid');
                         }
@@ -76,22 +88,33 @@ export class DCCOMPCalculator {
                     }
                 });
 
-                console.log(`Total coverage: ${totalCoverage}, Selected methods: ${selectedMethodsCount}`);
+                let dcComp = 0;
+                Object.entries(this.coverageWeights).forEach(([group, weight]) => {
+                    const groupCount = groupStats[group].count;
+                    const groupCoverageSum = groupStats[group].totalCoverage;
+                    const contribution = groupCount > 0
+                        ? (weight / groupCount) * groupCoverageSum
+                        : 0;
 
-                const averageCoverage = selectedMethodsCount > 0
-                    ? Math.round((totalCoverage / selectedMethodsCount) * 10) / 10
-                    : 0;
+                    console.log(`${group}: count=${groupCount}, coverageSum=${groupCoverageSum}, weight=${weight}, contribution=${contribution.toFixed(2)}%`);
+                    dcComp += contribution;
+                });
+
+                const roundedDcComp = Math.round(dcComp * 10) / 10;
 
                 const currentValue = parseFloat(dcCompCell?.textContent) || 0;
-                const needsUpdate = Math.abs(currentValue - averageCoverage) > 0.1;
+                const currentDisplay = currentValue.toFixed(1)
+                const newDisplay = roundedDcComp.toFixed(1)
+                const needsUpdate = currentDisplay !== newDisplay
+                // const needsUpdate = Math.abs(currentValue - roundedDcComp) > 0.1;
 
-                console.log(`Current DCCOMP: ${currentValue}%, New value: ${averageCoverage}%`);
+                console.log(`Current DCCOMP: ${currentValue}%, New value: ${roundedDcComp}%`);
                 console.log('Needs update:', needsUpdate);
 
                 if (needsUpdate || force) {
-                    console.log(`Updating DCCOMP: ${currentValue}% -> ${averageCoverage}%`);
+                    console.log(`Updating DCCOMP: ${currentValue}% -> ${roundedDcComp}%`);
                     if (dcCompCell) {
-                        dcCompCell.textContent = averageCoverage;
+                        dcCompCell.textContent = roundedDcComp;
                     }
                     updatesMade = true;
 
@@ -125,7 +148,7 @@ export class DCCOMPCalculator {
      */
     findCalculationRow(deviceName) {
         const calcRows = document.querySelectorAll('table:has(.dc-comp-cell) tbody tr');
-        
+
         for (const row of calcRows) {
             const firstCell = row.querySelector('td:first-child');
             if (firstCell && firstCell.textContent.trim() === deviceName) {
